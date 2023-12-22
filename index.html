@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>UwU</title>
+</head>
+<body>
+    <canvas width="800" height="600" id="canvas"></canvas>
+    <pre id="console">
+    </pre>
+    <script type="text/javascript" src="runtime.js"></script>
+    <script type="text/javascript">
+        function setupExtraImports(wasmMemoryInterface) {
+            return {
+                "js_extra": {
+                    set_window_title: (title_ptr, title_len) => {
+                        document.title = wasmMemoryInterface.loadString(title_ptr, title_len);
+                    },
+                    resize_canvas: (width, height) => {
+                        document.getElementById("canvas").width = width;
+                        document.getElementById("canvas").height = height;
+                    },
+                },
+            }
+        }
+        odin.runWasm("odingin.wasm", document.getElementById("console"), setupExtraImports);
+    </script>
+</body>
+</html>
