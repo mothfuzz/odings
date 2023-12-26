@@ -49,7 +49,7 @@ If you just change your mod, however, you *only* have to rebuild your mod for th
 ### Build for the Web
 It's as easy as changing the target when building - `oding build . -target:js_wasm32`
 
-This will produce a `.wasm` file. You can then run a local webserver in the engine directory (e.g. `python -m http.server) and open up `localhost:8000` in your browser.
+This will produce a `.wasm` file. You can then run a local webserver in the engine directory (e.g. `python -m http.server`) and open up `localhost:8000` in your browser.
 
 When shipping a web application, you'll need to host the engine's `.wasm` build, the `index.html` and the `runtime.js`.
 
