@@ -11,7 +11,6 @@ import "core:math"
 
 level: ^TestMap
 
-
 TestMap :: struct {
 	trans: transform.Transform,
 	col: collision.Collider,

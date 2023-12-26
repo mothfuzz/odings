@@ -42,9 +42,10 @@ key2enum :: proc(key: string) -> Key {
 }
 
 key_down_callback :: proc(e: js.Event) {
-	//fmt.println(e.key.key)
+	js.event_prevent_default()
 	keys_current_frame[key2enum(e.key.key)] = true
 }
 key_up_callback :: proc(e: js.Event) {
+	js.event_prevent_default()
 	keys_current_frame[key2enum(e.key.key)] = false
 }

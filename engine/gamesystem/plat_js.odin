@@ -29,6 +29,8 @@ scratch : mem.Scratch_Allocator
 alloc: mem.Allocator
 temp_alloc: mem.Allocator
 
+memory_initialized: bool = false
+
 import "core:mem"
 import "core:intrinsics"
 init :: proc() {
@@ -36,20 +38,6 @@ init :: proc() {
 	js.add_window_event_listener(.Key_Down, nil, key_down_callback)
 	js.add_window_event_listener(.Key_Up, nil, key_up_callback)
 
-	_ = intrinsics.wasm_memory_grow(0, main_memory_size+temp_memory_size)
-
-	//on wasm we're using an arena allocator so we don't have to allocate pages mid-program
-	//(this invalidates pointers in existing pages -_-)
-	arena_buf = make([]byte, main_memory_size, js.page_allocator())
-	mem.arena_init(&arena, arena_buf)
-	alloc = mem.arena_allocator(&arena)
-
-	//scratch allocator itself doesn't allocate & reuses memory, so it'll use whatever pages it needs
-	mem.scratch_allocator_init(&scratch, temp_memory_size, js.page_allocator())
-	temp_alloc = mem.scratch_allocator(&scratch)
-
-	context.allocator = alloc
-	context.temp_allocator = temp_alloc
 	when common.Renderer == "gl" {
 		fmt.println("Initializing Web Context...")
 		gl.SetCurrentContextById("canvas")
@@ -65,11 +53,25 @@ run :: proc(step: proc(f64)) {
 	//for {}
 }
 
-import "core:strings"
 window_title :: proc(title: string) {
 	set_window_title(title)
 }
 
 get_memory :: proc() -> (mem.Allocator, mem.Allocator) {
+	if !memory_initialized {
+		_ = intrinsics.wasm_memory_grow(0, main_memory_size+temp_memory_size)
+
+		//on wasm we're using an arena allocator so we don't have to allocate pages mid-program
+		//(this invalidates pointers in existing pages -_-)
+		arena_buf = make([]byte, main_memory_size, js.page_allocator())
+		mem.arena_init(&arena, arena_buf)
+		alloc = mem.arena_allocator(&arena)
+
+		//scratch allocator itself doesn't allocate & reuses memory, so it'll use whatever pages it needs
+		mem.scratch_allocator_init(&scratch, temp_memory_size, js.page_allocator())
+		temp_alloc = mem.scratch_allocator(&scratch)
+		memory_initialized = true
+	}
+
 	return alloc, temp_alloc
 }

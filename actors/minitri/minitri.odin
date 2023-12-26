@@ -39,13 +39,16 @@ minitri_init :: proc(a: ^scene.Actor) -> bool {
 
 	//m.col = collision.bounding_box(1, 1, 1)
 	m.col = collision.mesh({collision.plane(expand_values(tri.position))})
-	fmt.println(m.col)
+	fmt.println("minitri collision:", m.col)
 	scene.register_body(a, &m.trans, &m.col)
 
+	fmt.println("loading minitrimesh...")
 	m.tri, _ = gs.load_mesh("tri", tri[:])
 	m.trans = transform.origin()
 	//transform.scale(&m.trans, {0.2, 0.2, 0.2})
 	transform.scale(&m.trans, {40, 40, 40})
+
+	fmt.println("No problem here")
 
 	return true
 }
@@ -57,7 +60,7 @@ minitri_update :: proc(a: ^scene.Actor) -> bool {
 }
 minitri_draw :: proc(a: ^scene.Actor) -> bool {
 	m := cast(^MiniTri)(a.data)
-	gs.draw_mesh(&m.tri, nil, transform.mat4(&m.trans))
+	//gs.draw_mesh(&m.tri, nil, transform.mat4(&m.trans))
 	if m.colliding {
 		util.draw_bounding_box(&m.col, &m.trans, {1.0, 1.0, 0.5, 1.0})
 	} else {
