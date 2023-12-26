@@ -45,3 +45,12 @@ All libraries (.dll on Windows, .so on Mac/Linux) found in the mods folder will 
 
 If you change the engine code, you'll have to rebuild `gamesystem` as well as the engine itself.
 If you just change your mod, however, you *only* have to rebuild your mod for the changes to take effect.
+
+### Build for the Web
+It's as easy as changing the target when building - `oding build . -target:js_wasm32`
+
+This will produce a `.wasm` file. You can then run a local webserver in the engine directory (e.g. `python -m http.server) and open up `localhost:8000` in your browser.
+
+When shipping a web application, you'll need to host the engine's `.wasm` build, the `index.html` and the `runtime.js`.
+
+Note that web builds do not support mods.
