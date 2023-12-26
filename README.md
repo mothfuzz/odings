@@ -6,7 +6,9 @@ The engine features an auto-batching OpenGL renderer built for high performance 
 
 Tested on desktop for both Windows, Linux, and on the web using Firefox.
 
-Gameplay code is written using an actor system, with helper functions provided for querying and communicating with other actors in the scene.
+Gameplay code is written using an actor system, with helper functions provided for discovering and communicating with other actors in the scene, as well as collision detection & spatial queries.
+
+The engine can be considered both 2D and 3D, and includes helper functions for both to work seamlessly and pixel-perfect.
 
 Modding is built-in using dynamically loaded libraries, and mods are provided the exact same API as internal game code - you could even write a whole game *just* using the mod system.
 Mods are not cross-platform once compiled, but can be compiled to any platform, just like the engine itself.
