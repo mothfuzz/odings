@@ -38,17 +38,20 @@ init :: proc(s: ^scene.Scene) {
 }
 
 tick :: proc(s: ^scene.Scene) {
-	//nothing special here
+	if gs.key_pressed(gs.Key.Escape) {
+		gs.quit()
+	}
 }
 
 draw :: proc(s: ^scene.Scene) {
-	//or here
+	//nothing special here
 }
 
-exit :: proc(s: ^scene.Scene) {
+quit :: proc(s: ^scene.Scene) {
+	fmt.println("running cleanup code...")
 	scene.kill(s, tid)
 }
 
 main :: proc() {
-	engine.run(init, tick, draw, exit)
+	engine.run(init, tick, draw, quit)
 }

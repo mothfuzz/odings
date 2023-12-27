@@ -7,7 +7,7 @@ import "core:fmt"
 mods_inits: [dynamic]gamestate_proc
 mods_ticks: [dynamic]gamestate_proc
 mods_draws: [dynamic]gamestate_proc
-mods_exits: [dynamic]gamestate_proc
+mods_quits: [dynamic]gamestate_proc
 
 load_mods :: proc() {
 	when ODIN_OS!=.JS && #config(ENABLE_MODS, false) {
@@ -15,7 +15,7 @@ load_mods :: proc() {
 		mods_inits = make([dynamic]gamestate_proc)
 		mods_ticks = make([dynamic]gamestate_proc)
 		mods_draws = make([dynamic]gamestate_proc)
-		mods_exits = make([dynamic]gamestate_proc)
+		mods_quits = make([dynamic]gamestate_proc)
 
 		mods_dir : os.Handle
 		dir: []os.File_Info
@@ -54,10 +54,10 @@ load_mods :: proc() {
 				f := cast(gamestate_proc)(f)
 				append(&mods_draws, f)
 			}
-			if f, ok := dynlib.symbol_address(lib, "exit"); ok {
-				fmt.println("found exit function")
+			if f, ok := dynlib.symbol_address(lib, "quit"); ok {
+				fmt.println("found quit function")
 				f := cast(gamestate_proc)(f)
-				append(&mods_exits, f)
+				append(&mods_quits, f)
 			}
 		}
 	}

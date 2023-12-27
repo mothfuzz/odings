@@ -47,10 +47,20 @@ init :: proc() {
 	}
 }
 
+Running : bool = false
+running :: proc() -> bool {
+	return Running
+}
+
 run :: proc(step: proc(f64)) {
+	Running = true
 	//the step is actually handled in the runtime.js
 	//so whatever
 	//for {}
+}
+
+quit :: proc() {
+	Running = false
 }
 
 window_title :: proc(title: string) {

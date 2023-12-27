@@ -7,9 +7,7 @@ import "scene"
 
 Current_Scene : ^scene.Scene
 gamestate_proc :: proc(^scene.Scene)
-init, tick, draw, exit : gamestate_proc
-
-running : bool = false
+init, tick, draw, quit : gamestate_proc
 
 accumulator : f64
 time : f64
@@ -17,7 +15,13 @@ frames : int
 @(export)
 step :: proc(dt: f64) {
 
-	if !running {
+	if !gs.running() {
+		if quit != nil {
+			quit(Current_Scene)
+		}
+		for f in mods_quits {
+			f(Current_Scene)
+		}
 		return
 	}
 
@@ -63,12 +67,12 @@ step :: proc(dt: f64) {
 	gs.draw()
 }
 
-run :: proc(i: gamestate_proc = nil, t: gamestate_proc = nil, d: gamestate_proc = nil, e: gamestate_proc = nil) {
+run :: proc(i: gamestate_proc = nil, t: gamestate_proc = nil, d: gamestate_proc = nil, q: gamestate_proc = nil) {
 
 	init = i
 	tick = t
 	draw = d
-	exit = e
+	quit = q
 
 	//see ya later allocator
 	context.allocator, context.temp_allocator = gs.get_memory()
@@ -92,6 +96,5 @@ run :: proc(i: gamestate_proc = nil, t: gamestate_proc = nil, d: gamestate_proc 
 		load_mods()
 	}
 
-	running = true
 	gs.run(step)
 }

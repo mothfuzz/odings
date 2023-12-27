@@ -24,11 +24,11 @@ You can then run the produced executable.
 Or, even quicker, you can run `odin run .` to build and run directly in one step.
 
 ### Add my own game code internally
-Simply open up `main.odin` and edit `init`/`tick`/`draw`/`exit`.
-`init` and `exit` are run on setup and teardown respectively, `tick` is run at exactly 125fps, and `draw` is run as many times as your GPU allows.
+Simply open up `main.odin` and edit `init`/`tick`/`draw`/`quit`.
+`init` and `quit` are run on setup and teardown respectively, `tick` is run at exactly 125fps, and `draw` is run as many times as your GPU allows.
 
 ### Develop a mod / write games using the mod system
-Create a new package under the mods folder, e.g. `mymod`, and create a package that exports at least one of the `init`/`tick`/`draw`/`exit` functions - they are called the same way in mod code as they are in internal code.
+Create a new package under the mods folder, e.g. `mymod`, and create a package that exports at least one of the `init`/`tick`/`draw`/`quit` functions - they are called the same way in mod code as they are in internal code.
 
 To load mods, the engine has to be built with mods enabled.
 In the directory where you downloaded the engine, follow these steps:

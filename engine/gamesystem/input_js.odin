@@ -37,6 +37,7 @@ key2enum :: proc(key: string) -> Key {
 	case "ArrowUp": return .Up
 	case "ArrowDown": return .Down
 	case " ": return .Space
+	case "Escape": return .Escape
 	}
 	return nil
 }

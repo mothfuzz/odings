@@ -36,13 +36,14 @@ key2enum :: proc "contextless" (key: i32) -> Key {
 	case glfw.KEY_UP: return .Up
 	case glfw.KEY_DOWN: return .Down
 	case glfw.KEY_SPACE: return .Space
+	case glfw.KEY_ESCAPE: return .Escape
 	}
 	return nil
 }
 
 key_callback :: proc "c" (window: glfw.WindowHandle, key,  scancode, action, mods: i32) {
-	if key == glfw.KEY_ESCAPE && action == glfw.PRESS {
+	/*if key == glfw.KEY_ESCAPE && action == glfw.PRESS {
 		glfw.SetWindowShouldClose(window, true)
-	}
+	}*/
 	keys_current_frame[key2enum(key)] = (action == glfw.PRESS || action == glfw.REPEAT)
 }

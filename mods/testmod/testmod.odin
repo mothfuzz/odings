@@ -26,6 +26,6 @@ draw :: proc(s: ^scene.Scene) {
 }
 
 @(export)
-exit :: proc(s: ^scene.Scene) {
+quit :: proc(s: ^scene.Scene) {
 	//this too
 }

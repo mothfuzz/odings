@@ -1038,7 +1038,7 @@ class WebGLInterface {
 			},
 			BindSampler: (unit, sampler) => {
 				this.assertWebGL2();
-				this.ctx.bindSampler(unit, this.samplers[Sampler]);
+				this.ctx.bindSampler(unit, this.samplers[sampler]);
 			},
 			SamplerParameteri: (sampler, pname, param) => {
 				this.assertWebGL2();
