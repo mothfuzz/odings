@@ -13,7 +13,7 @@ The engine can be considered both 2D and 3D, and includes helper functions for b
 Modding is built-in using dynamically loaded libraries, and mods are provided the exact same API as internal game code - you could even write a whole game *just* using the mod system.
 Mods are not cross-platform once compiled, but can be compiled to any platform, just like the engine itself.
 
-Finally, thanks to resource embedding, game developers can opt to build the engine & all game code (minus mods) as a single executable for easy distribution to players.
+Finally, thanks to resource embedding, game developers can opt to build the engine, all game code (minus mods), and all resources (such as textures or meshes) as a single executable for easy distribution to players.
 
 
 ## How To:
