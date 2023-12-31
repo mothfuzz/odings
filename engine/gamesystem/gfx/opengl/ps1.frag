@@ -19,9 +19,6 @@ uniform sampler2D metallic_texture;
 uniform vec4 metallic_tint;
 
 uniform vec4 fog_color;
-#define MAX_LIGHTS 128
-//1024 uniforms vectors total, so 128 per light is decent
-//and only 16 texture units. 4 are being used by the material, possibly more for an environment map of sorts.
 
 //precision highp sampler2DArrayShadow;
 //precision highp samplerCubeArrayShadow;
@@ -35,7 +32,7 @@ struct DirectionalLight {
     bool shadows;
 };
 uniform int num_directional_lights;
-uniform DirectionalLight directional_lights[MAX_LIGHTS];
+uniform DirectionalLight directional_lights[MAX_DIRECTIONAL_LIGHTS];
 
 struct PointLight {
     vec3 position;
@@ -43,7 +40,7 @@ struct PointLight {
     bool shadows;
 };
 uniform int num_point_lights;
-uniform PointLight point_lights[MAX_LIGHTS];
+uniform PointLight point_lights[MAX_POINT_LIGHTS];
 
 struct SpotLight {
     vec3 position;
@@ -52,7 +49,7 @@ struct SpotLight {
     bool shadows;
 };
 uniform int num_spot_lights;
-uniform SpotLight spot_lights[MAX_LIGHTS];
+uniform SpotLight spot_lights[MAX_SPOT_LIGHTS];
 
 layout(location=0) out vec4 screen_color;
 

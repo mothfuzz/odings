@@ -30,6 +30,7 @@ gs_init :: proc() {
 
 	gl.load_up_to(4, 1, glfw.gl_set_proc_address)
 	fmt.println(gl.GetString(gl.VERSION))
+
 	i: i32
 	gl.GetIntegerv(gl.MAX_VERTEX_ATTRIBS, &i)
 	fmt.println("MAX_VERTEX_ATTRIBS:", i)
