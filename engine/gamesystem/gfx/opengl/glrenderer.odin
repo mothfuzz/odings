@@ -57,14 +57,22 @@ program_uniform_roughness_tint : i32
 program_uniform_metallic : i32
 program_uniform_metallic_tint : i32
 //shader params - lights
+//directional
 num_directional_lights_uniform : i32
 directional_light_direction_uniforms : [MAX_LIGHTS]i32 = {}
 directional_light_color_uniforms : [MAX_LIGHTS]i32 = {}
 directional_light_shadow_uniforms : [MAX_LIGHTS]i32 = {}
+//point
 num_point_lights_uniform : i32
 point_light_position_uniforms : [MAX_LIGHTS]i32 = {}
 point_light_color_uniforms : [MAX_LIGHTS]i32 = {}
 point_light_shadow_uniforms : [MAX_LIGHTS]i32 = {}
+//spot
+num_spot_lights_uniform: i32
+spot_light_position_uniforms : [MAX_LIGHTS]i32 = {}
+spot_light_direction_uniforms : [MAX_LIGHTS]i32 = {}
+spot_light_color_uniforms : [MAX_LIGHTS]i32 = {}
+spot_light_shadow_uniforms : [MAX_LIGHTS]i32 = {}
 
 Blank_Texture : Texture
 Blank_Normal : Texture
@@ -129,14 +137,18 @@ init :: proc() {
 	//light params
 	num_directional_lights_uniform = gl.GetUniformLocation(program, "num_directional_lights")
 	num_point_lights_uniform = gl.GetUniformLocation(program, "num_point_lights")
+	num_spot_lights_uniform = gl.GetUniformLocation(program, "num_spot_lights")
 	for i in 0..<MAX_LIGHTS {
 		directional_light_direction_uniforms[i] = uniform_array("directional_lights[%d].direction", i)
 		directional_light_color_uniforms[i] = uniform_array("directional_lights[%d].color", i)
-		//directional_light_shadow_uniforms : [MAX_LIGHTS]int = {}
-
+		directional_light_shadow_uniforms[i] = uniform_array("directional_lights[%d].shadows", i)
 		point_light_position_uniforms[i] = uniform_array("point_lights[%d].position", i)
 		point_light_color_uniforms[i] = uniform_array("point_lights[%d].color", i)
-		//point_light_shadow_uniforms : [MAX_LIGHTS]int = {}
+		point_light_shadow_uniforms[i] = uniform_array("point_lights[%d].shadows", i)
+		spot_light_position_uniforms[i] = uniform_array("spot_lights[%d].position", i)
+		spot_light_direction_uniforms[i] = uniform_array("spot_lights[%d].direction", i)
+		spot_light_color_uniforms[i] = uniform_array("spot_lights[%d].color", i)
+		spot_light_shadow_uniforms[i] = uniform_array("spot_lights[%d].shadows", i)
 	}
 
 	Blank_Texture, _ = gs_load_texture("blank.png", #load("blank.png"))
@@ -191,6 +203,7 @@ gs_draw :: proc() {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 	//loop through all lights and draw them depth-only to a texture if they have shadows enabled
+	//draw meshes, draw sprites, untextured
 
 	//draw main scene, fully lit
 	gl.Uniform1i(num_directional_lights_uniform, num_directional_lights)
@@ -198,25 +211,40 @@ gs_draw :: proc() {
 		d := directional_lights[i].direction
 		direction := (view * [4]f32{d.x, -d.y, d.z, 0.0}).xyz
 		gl.Uniform3f(directional_light_direction_uniforms[i], expand_values(direction))
-		gl.Uniform4f(directional_light_color_uniforms[i], expand_values(directional_lights[i].color))
-		//shadow...
+		gl.Uniform4f(directional_light_color_uniforms[i], expand_values(directional_lights[i].color), directional_lights[i].strength)
+		gl.Uniform1i(directional_light_shadow_uniforms[i], i32(directional_lights[i].shadows))
 	}
 	gl.Uniform1i(num_point_lights_uniform, num_point_lights)
 	for i in 0..<num_point_lights {
 		p := point_lights[i].position
 		position := (view * [4]f32{p.x, p.y, p.z, 1.0}).xyz
 		gl.Uniform3f(point_light_position_uniforms[i], expand_values(position))
-		gl.Uniform4f(point_light_color_uniforms[i], expand_values(point_lights[i].color))
-		//shadow...
+		gl.Uniform4f(point_light_color_uniforms[i], expand_values(point_lights[i].color), point_lights[i].radius)
+		gl.Uniform1i(point_light_shadow_uniforms[i], i32(point_lights[i].shadows))
+	}
+	gl.Uniform1i(num_spot_lights_uniform, num_spot_lights)
+	for i in 0..<num_spot_lights {
+		p := spot_lights[i].position
+		position := (view * [4]f32{p.x, p.y, p.z, 1.0}).xyz
+		gl.Uniform3f(spot_light_position_uniforms[i], expand_values(position))
+		d := spot_lights[i].direction
+		direction := (view * [4]f32{d.x, d.y, d.z, 0.0}).xyz
+		gl.Uniform3f(spot_light_direction_uniforms[i], expand_values(direction))
+		gl.Uniform4f(spot_light_color_uniforms[i], expand_values(spot_lights[i].color), math.cos(math.to_radians(spot_lights[i].angle)))
+		gl.Uniform1i(spot_light_shadow_uniforms[i], i32(spot_lights[i].shadows))
 	}
 	draw_all_meshes(view, projection, true)
 	num_point_lights = 0;
 	num_directional_lights = 0;
+	num_spot_lights = 0;
 
 	//draw lines over everything else, unlit
 	gl.Uniform1i(num_point_lights_uniform, 0)
 	gl.Uniform1i(num_directional_lights_uniform, 0)
-	draw_all_lines()
+	gl.Uniform1i(num_spot_lights_uniform, 0)
+	draw_all_lines(view, projection)
+
+	//draw UI layer, unlit, orthographic perspective.
 
 	//check for errors
 	for err := gl.GetError(); err != gl.NO_ERROR; err = gl.GetError() {

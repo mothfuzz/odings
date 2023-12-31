@@ -252,6 +252,7 @@ gs_draw_mesh :: proc(mesh: ^Mesh, material: ^Material, model_transform: matrix[4
 
 //called by draw
 draw_all_meshes :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32, clear_queue: bool) {
+	//perhaps do frustum culling based on view matrix.
 	for filename, mesh in meshes {
 		gl.BindVertexArray(mesh.vao)
 		//dammit bill

@@ -88,7 +88,7 @@ gs_draw_line_loop :: proc(l: []common.Vertex, model_transform: matrix[4,4]f32 = 
 }
 
 //called by draw
-draw_all_lines :: proc() {
+draw_all_lines :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32) {
 	if !lines_init {
 		init_lines()
 	}

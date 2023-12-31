@@ -21,6 +21,7 @@ TestMap :: struct {
 	mat: gs.Material,
 	//lights
 	d: gs.DirectionalLight,
+	spot: gs.SpotLight,
 	//actors
 	player: Player,
 	player_id: scene.ActorId,
@@ -39,6 +40,7 @@ testmap_init :: proc(a: ^scene.Actor) -> bool {
 	transform.rotatez(&t.trans, math.to_radians_f32(180))
 
 	t.d = gs.create_directional_light({0.5, 1, 0.5}, {1.0, 1.0, 1.0}, 0.5)
+	t.spot = gs.create_spot_light({0, -800, 0}, {0, 1, 0}, {0.6, 0.6, 0.6}, 45)
 
 	mesh := util.collision_mesh(&t.obj)
 	t.col = collision.transform_collider_copy(mesh, &t.trans) //register transformed collider & never update it.
@@ -60,6 +62,7 @@ testmap_draw :: proc(a: ^scene.Actor) -> bool {
 	t := cast(^TestMap)(a.data)
 	gs.draw_mesh(&t.obj, &t.mat, transform.mat4(&t.trans))
 	gs.draw_directional_light(&t.d)
+	gs.draw_spot_light(&t.spot)
 	//gs.draw_light({direction={0.5, -1, 0}, type=.Directional, shadows=true})
 	//util.draw_mesh(&t.col)
 	return true

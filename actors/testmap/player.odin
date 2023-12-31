@@ -122,7 +122,7 @@ player_update :: proc(a: ^scene.Actor) -> bool {
 		color = ([3]f32)(glsl.normalize(glsl.vec3(color)))
 		l := gs.create_point_light({0, 0, 0}, color, 500.0)
 		l.position = p.trans.position
-		l.position.y = p.trans.position.y - l.color.a / 2.0
+		l.position.y = p.trans.position.y - l.radius / 2.0
 		append(&p.ps, l)
 	}
 	return true

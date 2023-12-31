@@ -12,6 +12,7 @@ when common.Renderer == "gl" {
 	Sampler :: opengl.Sampler
 	DirectionalLight :: opengl.DirectionalLight
 	PointLight :: opengl.PointLight
+	SpotLight :: opengl.SpotLight
 	Material :: opengl.Material
 	TextureWrap :: opengl.TextureWrap
 	TextureFilter :: opengl.TextureFilter
@@ -48,6 +49,8 @@ when common.Renderer == "gl" {
 	draw_directional_light : type_of(opengl.gs_draw_directional_light)
 	create_point_light : type_of(opengl.gs_create_point_light)
 	draw_point_light : type_of(opengl.gs_draw_point_light)
+	create_spot_light : type_of(opengl.gs_create_spot_light)
+	draw_spot_light : type_of(opengl.gs_draw_spot_light)
 
 	@(init)
 	load_gfx :: proc() {
@@ -75,8 +78,8 @@ when common.Renderer == "gl" {
 		draw_directional_light = load_proc("gs_draw_directional_light", opengl.gs_draw_directional_light)
 		create_point_light = load_proc("gs_create_point_light", opengl.gs_create_point_light)
 		draw_point_light = load_proc("gs_draw_point_light", opengl.gs_draw_point_light)
-		//create_spot_light = load_proc("gs_create_spot_light", opengl.gs_create_spot_light)
-		//draw_spot_light = load_proc("gs_draw_spot_light", opengl.gs_draw_spot_light)
+		create_spot_light = load_proc("gs_create_spot_light", opengl.gs_create_spot_light)
+		draw_spot_light = load_proc("gs_draw_spot_light", opengl.gs_draw_spot_light)
 
 	}
 }
