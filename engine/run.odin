@@ -77,7 +77,7 @@ run :: proc(i: gamestate_proc = nil, t: gamestate_proc = nil, d: gamestate_proc 
 	//see ya later allocator
 	context.allocator, context.temp_allocator = gs.get_memory()
 
-	fmt.println("Hi!!!!!")
+	fmt.printf("Hi!!!!!")
 
 	gs.init()
 

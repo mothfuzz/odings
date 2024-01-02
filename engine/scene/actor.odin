@@ -24,13 +24,23 @@ Actor :: struct {
 }
 
 import "core:fmt"
+import "core:runtime"
 
 spawn :: proc(scene: ^Scene, data: ^$T, s: Spawner) -> ActorId {
+	type_info := type_info_of(T)
+	named_type: runtime.Type_Info_Named
+	t_ok: bool
+	if named_type, t_ok = type_info.variant.(runtime.Type_Info_Named); !t_ok {
+		fmt.eprintln("Cannot spawn, Actor must be named type:", typeid_of(T))
+		return 0
+	}
+	type_name := fmt.aprint(named_type.pkg, named_type.name, sep=".")
+	fmt.println("type_name:", type_name)
+
 	if scene.actors == nil {
 		scene.actors = make(map[ActorId]^Actor)
 	}
 	scene.base_id += 1
-	type_name := fmt.aprint(typeid_of(T))
 	new_actor := new_clone(Actor{scene.base_id, scene, data, type_name, s.update, s.draw, s.destroy})
 	if s.init != nil {
 		s.init(new_actor)

@@ -34,7 +34,7 @@ load_mods :: proc() {
 			}
 			lib, ok := dynlib.load_library(file.fullpath)
 			if !ok {
-				fmt.println("Failed to load mod:", file.fullpath)
+				fmt.eprintln("Failed to load mod:", file.fullpath)
 				continue
 			}
 			fmt.println("Loaded mod:", file.name)
