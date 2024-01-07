@@ -134,6 +134,12 @@ player_draw :: proc(a: ^scene.Actor) -> bool {
 	for l in &p.ps {
 		gs.draw_point_light(&l)
 	}
+
+	if hit, ok := collision.raycast(p.trans.position, {0, 1, 0}, level.col.planes); ok {
+		gs.draw_lines({{position=p.trans.position, color={0, 1, 0, 1}},
+					   {position=hit.point, color={1, 0, 0, 1}}})
+	}
+
 	return true
 }
 Player_Spawner : scene.Spawner = {player_init, player_update, player_draw, nil}
