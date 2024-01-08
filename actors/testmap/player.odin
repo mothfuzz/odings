@@ -99,8 +99,8 @@ player_update :: proc(a: ^scene.Actor) -> bool {
 	p.velocity.z = dz*p.vspeed - dx*p.hspeed
 	//p.velocity.y += 0.01
 
-	//p.velocity = scene.move_against_terrain(a, p.velocity) //avoids all colliders registered as 'solid' and with mesh collision type
-	p.velocity = collision.move_against_terrain(p.trans.position, 24.0, p.velocity, level.col.planes)
+	p.velocity = scene.move_against_terrain(a, p.velocity) //avoids all colliders registered as 'solid' and with mesh collision type
+	//p.velocity = collision.move_against_terrain(p.trans.position, 24.0, p.velocity, level.col.planes)
 	//fmt.println(collision.transform_extents(p.col.extents, &p.trans))
 
 	transform.translate(&p.trans, p.velocity)
@@ -135,7 +135,12 @@ player_draw :: proc(a: ^scene.Actor) -> bool {
 		gs.draw_point_light(&l)
 	}
 
-	if hit, ok := collision.raycast(p.trans.position, {0, 1, 0}, level.col.planes); ok {
+	/*if hit, ok := collision.raycast(p.trans.position, {0, 1, 0}, level.col.planes); ok {
+		gs.draw_lines({{position=p.trans.position, color={0, 1, 0, 1}},
+					   {position=hit.point, color={1, 0, 0, 1}}})
+	}*/
+	for hit in scene.raycast(a.scene, p.trans.position, {0, 1, 0}) {
+		fmt.println(hit.id)
 		gs.draw_lines({{position=p.trans.position, color={0, 1, 0, 1}},
 					   {position=hit.point, color={1, 0, 0, 1}}})
 	}

@@ -17,14 +17,7 @@ Collider :: struct {
 	planes: []Plane,
 }
 
-mesh :: proc(planes: []Plane) -> (c: Collider) {
-	c.planes = make([]Plane, len(planes))
-	copy(c.planes, planes)
-	c.extents = plane_extents(planes)
-	c.shape = .Mesh
-	return
-}
-bounding_box :: proc(w, h, d: f32) -> (c: Collider) {
+mesh_box :: proc(w, h, d: f32) -> (c: Collider) {
 	v := [][3]f32{
 		// front
 		{-w / 2, -h / 2, +d / 2},
@@ -57,6 +50,18 @@ bounding_box :: proc(w, h, d: f32) -> (c: Collider) {
 		plane(v[3], v[2], v[6]),
 		plane(v[6], v[7], v[3]),
 	})
+	return
+}
+
+mesh :: proc(planes: []Plane) -> (c: Collider) {
+	c.planes = make([]Plane, len(planes))
+	copy(c.planes, planes)
+	c.extents = plane_extents(planes)
+	c.shape = .Mesh
+	return
+}
+bounding_box :: proc(w, h, d: f32) -> (c: Collider) {
+	c = mesh_box(w, h, d)
 	delete(c.planes)
 	c.planes = nil
 	c.shape = .Bounding_Box
@@ -73,6 +78,16 @@ delete_collider :: proc(c: ^Collider) {
 		delete(c.planes)
 		c.planes = nil
 	}
+}
+
+//assuming that the length of planes is the same
+transform_collider_to :: proc(c: ^Collider, t: ^transform.Transform, cc: ^Collider) {
+	cc.shape = c.shape
+	cc.extents = c.extents
+	if c.planes != nil {
+		copy(cc.planes, c.planes)
+	}
+	transform_collider_ref(cc, t)
 }
 
 transform_collider_copy :: proc(c: Collider, t: ^transform.Transform) -> (cc: Collider) {
@@ -112,7 +127,7 @@ transform_collider_ref :: proc(c: ^Collider, t: ^transform.Transform) {
 	return
 }
 
-transform_collider :: proc{transform_collider_copy, transform_collider_ref}
+transform_collider :: proc{transform_collider_copy, transform_collider_ref, transform_collider_to}
 
 sphere_overlap :: proc(ca: [3]f32, ra: f32, cb: [3]f32, rb: f32) -> bool {
 	return length(cb - ca) <= ra+rb

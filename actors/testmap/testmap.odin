@@ -45,7 +45,7 @@ testmap_init :: proc(a: ^scene.Actor) -> bool {
 	mesh := util.collision_mesh(&t.obj)
 	t.col = collision.transform_collider_copy(mesh, &t.trans) //register transformed collider & never update it.
 	collision.delete_collider(&mesh)
-	scene.register_body(a, nil, &t.col)
+	scene.register_body(a, nil, &t.col, true)
 
 	player_spawn := transform.origin()
 	transform.translate(&player_spawn, {0, -380, 0})

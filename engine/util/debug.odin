@@ -37,10 +37,11 @@ draw_bounding_box :: proc(col: ^collision.Collider, t: ^transform.Transform = ni
 	gs.draw_lines(connect[:])
 }
 
-draw_mesh :: proc(col: ^collision.Collider, color: [4]f32 = {1, 1, 1, 1}) {
+draw_mesh :: proc(col: ^collision.Collider, t: ^transform.Transform = nil, color: [4]f32 = {1, 1, 1, 1}) {
 	if col.planes == nil {
 		return
 	}
+	col := collision.transform_collider(col^, t)
 	for p in col.planes {
 		lines: [3]gs.Vertex = {
 			{position=p.points[0], color=color},
@@ -49,4 +50,5 @@ draw_mesh :: proc(col: ^collision.Collider, color: [4]f32 = {1, 1, 1, 1}) {
 		}
 		gs.draw_line_loop(lines[:])
 	}
+	collision.delete_collider(&col)
 }

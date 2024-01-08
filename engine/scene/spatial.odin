@@ -8,11 +8,22 @@ import "../collision"
 Body :: struct {
 	t: ^transform.Transform,
 	c: ^collision.Collider,
+	ct: collision.Collider,
 	tprev: transform.Transform,
+	transformed: bool,
 	//ty: typeid,
 	layer: string,
 	//layers: [dynamic]string,
 	cells: [dynamic][3]i32,
+	solid: bool,
+}
+
+//since transforming colliders is expensive, we want to do this on-demand rather than every frame.
+transform_body :: proc(b: ^Body) {
+	if b.transformed == false {
+		collision.transform_collider(b.c, b.t, &b.ct)
+		b.transformed = true
+	}
 }
 
 cell_size :: 512
@@ -64,7 +75,7 @@ update_body :: proc(scene: ^Scene, id: ActorId) {
 }
 
 //associate an actor with a body.
-register_body :: proc(a: ^Actor, t: ^transform.Transform, c: ^collision.Collider = nil) {
+register_body :: proc(a: ^Actor, t: ^transform.Transform, c: ^collision.Collider = nil, solid: bool = false) {
 	if a.scene.bodies == nil {
 		a.scene.bodies = make(map[ActorId]Body)
 	}
@@ -82,7 +93,7 @@ register_body :: proc(a: ^Actor, t: ^transform.Transform, c: ^collision.Collider
 		tp = t^
 	}
 
-	b := Body{t, c, tp, a.type_name, make([dynamic][3]i32)}
+	b := Body{t, c, collision.transform_collider(c^, t), tp, true, a.type_name, make([dynamic][3]i32), solid}
 	a.scene.bodies[a.id] = b
 	update_body(a.scene, a.id)
 }
@@ -93,6 +104,7 @@ deregister_body :: proc(a: ^Actor) {
 			delete_key(&a.scene.spatial_hash[b.layer][cell], a.id)
 		}
 		collision.delete_collider(b.c) //useful?
+		collision.delete_collider(&b.ct)
 		delete_key(&a.scene.bodies, a.id)
 	}
 }
@@ -106,8 +118,15 @@ update_spatial :: proc(scene: ^Scene) {
 				delete_key(&scene.spatial_hash[b.layer][cell], id)
 			}
 			update_body(scene, id)
+			b.transformed = false
 			b.tprev = b.t^
 		}
+	}
+}
+
+solid :: proc(a: ^Actor, solid: bool) {
+	if b, ok := &a.scene.bodies[a.id]; ok {
+		b.solid = solid
 	}
 }
 
@@ -181,7 +200,9 @@ colliding :: proc(a: ^Actor, $type: typeid) -> (pass: map[ActorId]^type) {
 	if a.scene.bodies[a.id].c == nil {
 		return
 	}
-	ca := collision.transform_collider_copy(a.scene.bodies[a.id].c^, a.scene.bodies[a.id].t)
+	transform_body(a.scene.bodies[a.id])
+	ca := a.scene.bodies[a.id].ct
+	//ca := collision.transform_collider_copy(a.scene.bodies[a.id].c^, a.scene.bodies[a.id].t)
 
 	min_cell := ca.extents.mini / cell_size
 	max_cell := ca.extents.maxi / cell_size
@@ -204,20 +225,73 @@ colliding :: proc(a: ^Actor, $type: typeid) -> (pass: map[ActorId]^type) {
 							continue
 						}
 						b := cast(^type)(a.scene.actors[id].data)
-						cb := collision.transform_collider_copy(a.scene.bodies[id].c^, a.scene.bodies[id].t)
+						//cb := collision.transform_collider_copy(a.scene.bodies[id].c^, a.scene.bodies[id].t)
+						transform_body(a.scene.bodies[id])
+						cb := a.scene.bodies[id].ct
 						if collision.overlap(&ca, &cb) {
 							pass[id] = b
 						} else {
 							fail[id] = {}
 						}
-						collision.delete_collider(&cb)
+						//collision.delete_collider(&cb)
 					}
 				}
 			}
 		}
 	}
 
-	collision.delete_collider(&ca)
+	//collision.delete_collider(&ca)
 
+	return
+}
+
+move_against_terrain :: proc(a: ^Actor, velocity: [3]f32, radius: f32 = 0.0) -> (v: [3]f32) {
+	v = velocity
+	radius := radius
+
+	if b, ok := &a.scene.bodies[a.id]; ok {
+		if radius == 0.0 && b.c != nil {
+			transform_body(b)
+			extents := b.ct.extents.maxi - b.ct.extents.mini
+			radius = max(extents.x, extents.y, extents.z) / 2.0
+		}
+		for other_id, other_body in &a.scene.bodies {
+			if other_id == a.id {
+				continue
+			}
+			if !other_body.solid {
+				continue
+			}
+			if other_body.c == nil || other_body.c.shape != .Mesh {
+				continue
+			}
+
+			transform_body(&other_body)
+			v = collision.move_against_terrain(b.t.position, radius, v, other_body.ct.planes)
+		}
+	}
+	return
+}
+
+RayHit :: struct {
+	id: ActorId,
+	using hit: collision.RayHit,
+}
+
+raycast :: proc(scene: ^Scene, origin: [3]f32, direction: [3]f32, distance: f32 = 0) -> (hits: [dynamic]RayHit) {
+	hits = make([dynamic]RayHit, 0, context.temp_allocator)
+	//TODO: line drawing algorithm to only test bodies in raycast's cells.
+	for id, body in &scene.bodies {
+		if body.c == nil || body.c.shape != .Mesh {
+			continue
+		}
+
+		transform_body(&body)
+		if hit, ok := collision.raycast(origin, direction, body.ct.planes); ok {
+			if distance == 0 || hit.distance <= distance {
+				append(&hits, RayHit{id, hit})
+			}
+		}
+	}
 	return
 }
