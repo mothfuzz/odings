@@ -5,7 +5,7 @@ import "../collision"
 import gs "../gamesystem"
 
 draw_bounding_box :: proc(col: ^collision.Collider, t: ^transform.Transform = nil, color: [4]f32 = {1, 1, 1, 1}) {
-	col := collision.transform_collider(col^, t)
+	col := collision.transform_collider(col, t)
 	defer collision.delete_collider(&col)
 
 	mi := col.extents.mini
@@ -38,17 +38,18 @@ draw_bounding_box :: proc(col: ^collision.Collider, t: ^transform.Transform = ni
 }
 
 draw_mesh :: proc(col: ^collision.Collider, t: ^transform.Transform = nil, color: [4]f32 = {1, 1, 1, 1}) {
-	if col.planes == nil {
+	col := collision.transform_collider(col, t, context.temp_allocator)
+	planes := collision.get_planes(&col)
+	if planes == nil {
 		return
 	}
-	col := collision.transform_collider(col^, t)
-	for p in col.planes {
-		lines: [3]gs.Vertex = {
-			{position=p.points[0], color=color},
-			{position=p.points[1], color=color},
-			{position=p.points[2], color=color},
+	for p in planes {
+		lines := make([]gs.Vertex, len(p.points), context.temp_allocator)
+		for p, i in p.points {
+			lines[i] = {position = p, color=color}
 		}
-		gs.draw_line_loop(lines[:])
+		gs.draw_line_loop(lines)
+		//delete(lines)
 	}
-	collision.delete_collider(&col)
+	//collision.delete_collider(&col)
 }

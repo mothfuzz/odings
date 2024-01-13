@@ -44,7 +44,7 @@ coob_update :: proc(a: ^scene.Actor) -> bool {
 coob_draw :: proc(a: ^scene.Actor) -> bool {
 	c := cast(^Coob)(a.data)
 	gs.draw_mesh(&c.obj, &c.mat, transform.mat4(&c.trans))
-	//util.draw_mesh(&c.col, &c.trans)
+	util.draw_mesh(&c.col, &c.trans)
 	return true
 }
 Coob_Spawner : scene.Spawner = {coob_init, coob_update, coob_draw, nil}

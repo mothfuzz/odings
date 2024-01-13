@@ -56,11 +56,13 @@ move_against_terrain :: proc(position: [3]f32, radius: f32, velocity: [3]f32, pl
 		//this gives us a vector from the point perpendicular to the plane
 		//the length of which is the shortest possible distance
 		v := p.normal * dot(dist, p.normal)
+		//TODO: extend this to support ellipses & bounding boxes.
+		//for spheres we do distance check (like this)
+		//for ellipses we do a distance check along the line B-A
+		//for bounding boxes we do a bounds check.
 		r2 := radius * radius
 		if len2(v) <= r2 {
-			a := p.points[0]
-			b := p.points[1]
-			c := p.points[2]
+			a, b, c := tri(p)
 			//find the nearest point on the plane along that vector
 			//then check if the point is actually within the bounds of the triangle
 			if point_in_triangle(pos+v, a, b, c) ||

@@ -2,21 +2,48 @@ package collision
 import "../transform"
 import "core:math"
 
+Sphere :: struct {
+	center: [3]f32,
+	radius: f32,
+}
+Capsule :: struct {
+	a, b: [3]f32,
+	radius: f32,
+}
+Bounding_Box :: struct {} //empty because relevant info is stored in Extents anyway
+Convex :: struct {
+	planes: []Plane,
+}
+Mesh :: struct {
+	planes: []Plane,
+}
 
-Shape :: enum {
-	Bounding_Sphere,
+
+//roughly in order of complexity.
+Shape :: union {
 	Bounding_Box,
+	Sphere,
+	Capsule, //capsule = find closest perpendicular point on A-B line, check if distance smaller than radius. Easy!
+	//Box is just a certain kind of convex shape.
+	Convex, //SAT - separating planes - check all face normals plus every cross product pair for the inbetweens.
+	//we would have to submit: series of Polygons with normal + points
+	//ordering shoudln't matter if we submit the normal ourselves.
 	Mesh,
 }
+
+//convex_box :: proc(w, h, d: f32) -> (c: Collider)
+//convex_prism :: proc(w, h, d: f32) -> (c: Collider)
+//convex_cylinder :: proc(w, h, d: f32, n: int) -> (c: Collider)
+//convex_.......
 
 Collider :: struct {
 	shape: Shape,
 	//might be relative (actor) or absolute (terrain)
 	//but any actor with a transform would encode relative coordinates here & use the transform for positioning.
 	extents: Extents,
-	planes: []Plane,
 }
 
+//this sucks actually, migrate to convex hull asap
 mesh_box :: proc(w, h, d: f32) -> (c: Collider) {
 	v := [][3]f32{
 		// front
@@ -32,102 +59,117 @@ mesh_box :: proc(w, h, d: f32) -> (c: Collider) {
 	}
 	c = mesh([]Plane{
 		// front
-		plane(v[0], v[1], v[2]),
-		plane(v[2], v[3], v[0]),
+		plane({v[0], v[1], v[2]}),
+		plane({v[2], v[3], v[0]}),
 		// right
-		plane(v[1], v[5], v[6]),
-		plane(v[6], v[2], v[1]),
+		plane({v[1], v[5], v[6]}),
+		plane({v[6], v[2], v[1]}),
 		// back
-		plane(v[7], v[6], v[5]),
-		plane(v[5], v[4], v[7]),
+		plane({v[7], v[6], v[5]}),
+		plane({v[5], v[4], v[7]}),
 		// left
-		plane(v[4], v[0], v[3]),
-		plane(v[3], v[7], v[4]),
+		plane({v[4], v[0], v[3]}),
+		plane({v[3], v[7], v[4]}),
 		// bottom
-		plane(v[4], v[5], v[1]),
-		plane(v[1], v[0], v[4]),
+		plane({v[4], v[5], v[1]}),
+		plane({v[1], v[0], v[4]}),
 		// top
-		plane(v[3], v[2], v[6]),
-		plane(v[6], v[7], v[3]),
+		plane({v[3], v[2], v[6]}),
+		plane({v[6], v[7], v[3]}),
 	})
 	return
 }
 
 mesh :: proc(planes: []Plane) -> (c: Collider) {
-	c.planes = make([]Plane, len(planes))
-	copy(c.planes, planes)
+	c.shape = Mesh{clone_planes(planes)}
 	c.extents = plane_extents(planes)
-	c.shape = .Mesh
 	return
 }
-bounding_box :: proc(w, h, d: f32) -> (c: Collider) {
-	c = mesh_box(w, h, d)
-	delete(c.planes)
-	c.planes = nil
-	c.shape = .Bounding_Box
+
+convex :: proc(planes: []Plane) -> (c: Collider) {
+	c.shape = Convex{clone_planes(planes)}
+	c.extents = plane_extents(planes)
 	return
 }
-bounding_sphere :: proc(r: f32) -> (c: Collider) {
-	c = bounding_box(r*2, r*2, r*2)
-	c.shape = .Bounding_Sphere
+
+bounding_box :: proc(w, h, d: f32, o: [3]f32 = {0, 0, 0}) -> (c: Collider) {
+	c.shape = Bounding_Box{}
+	c.extents = {{o.x - w / 2, o.y - h / 2, o.z - d / 2},
+				 {o.x + w / 2, o.y + h / 2, o.z + d / 2}}
+	return
+}
+bounding_sphere :: proc(r: f32, o: [3]f32 = {0, 0, 0}) -> (c: Collider) {
+	c.shape = Sphere{o, r}
+	c.extents = {o-r, o+r}
+	return
+}
+capsule :: proc(a, b: [3]f32, r: f32) -> (c: Collider) {
+	c.shape = Capsule{a, b, r}
+	c.extents = capsule_extents(&c.shape.(Capsule))
 	return
 }
 
 delete_collider :: proc(c: ^Collider) {
-	if c.planes != nil {
-		delete(c.planes)
-		c.planes = nil
+	if mesh, ok := &c.shape.(Mesh); ok {
+		delete_planes(mesh.planes)
+		mesh.planes = nil
+	}
+	if hull, ok := &c.shape.(Convex); ok {
+		delete_planes(hull.planes)
+		hull.planes = nil
 	}
 }
 
-//assuming that the length of planes is the same
-transform_collider_to :: proc(c: ^Collider, t: ^transform.Transform, cc: ^Collider) {
-	cc.shape = c.shape
-	cc.extents = c.extents
-	if c.planes != nil {
-		copy(cc.planes, c.planes)
-	}
-	transform_collider_ref(cc, t)
-}
-
-transform_collider_copy :: proc(c: Collider, t: ^transform.Transform) -> (cc: Collider) {
-	cc.shape = c.shape
-	cc.extents = c.extents
-	if c.shape == .Mesh {
-		cc.planes = make([]Plane, len(c.planes))
-		copy(cc.planes, c.planes)
-	} else {
-		cc.planes = nil
-	}
-	transform_collider_ref(&cc, t)
-	return
-}
-
-//use this
-transform_collider_ref :: proc(c: ^Collider, t: ^transform.Transform) {
+//assuming that cc has planes & length of planes is the same as c
+transform_collider_ref :: proc(c: ^Collider, t: ^transform.Transform, cc: ^Collider) {
 	if t == nil {
 		return
 	}
-	switch c.shape {
-	case .Mesh:
-		//this is dummy expensive.
-		for p, i in c.planes {
-			c.planes[i] = transform_plane(p, t)
-		}
-		c.extents = plane_extents(c.planes)
-	case .Bounding_Box:
-		c.extents = transform_extents(c.extents, t)
-	case .Bounding_Sphere:
-		c.extents.mini *= t.scale
-		c.extents.maxi *= t.scale
-		c.extents.mini += t.position
-		c.extents.maxi += t.position
+	switch s in &c.shape {
+	case Mesh:
+		mesh := cc.shape.(Mesh)
+		transform_planes(s.planes, t, mesh.planes)
+		cc.extents = plane_extents(mesh.planes)
+	case Convex:
+		hull := cc.shape.(Convex)
+		transform_planes(s.planes, t, hull.planes)
+		cc.extents = plane_extents(hull.planes)
+	case Bounding_Box:
+		cc.extents = transform_extents(c.extents, t)
+	case Sphere:
+		cc.extents = c.extents
+		cc.extents.mini *= t.scale
+		cc.extents.maxi *= t.scale
+		cc.extents.mini += t.position
+		cc.extents.maxi += t.position
 		//ignore rotation because a rotated sphere is the same sphere
+	case Capsule:
+		cc.shape = transform_capsule(&s, t)
+		cc.extents = capsule_extents(&cc.shape.(Capsule))
 	}
 	return
 }
 
-transform_collider :: proc{transform_collider_copy, transform_collider_ref, transform_collider_to}
+import "core:mem"
+clone :: proc(c: ^Collider, allocator: mem.Allocator = context.allocator) -> (cc: Collider) {
+	cc.shape = c.shape
+	cc.extents = c.extents
+	if mesh, ok := c.shape.(Mesh); ok {
+		cc.shape = Mesh{clone_planes(mesh.planes, allocator)}
+	}
+	if hull, ok := c.shape.(Convex); ok {
+		cc.shape = Convex{clone_planes(hull.planes, allocator)}
+	}
+	return
+}
+
+transform_collider_copy :: proc(c: ^Collider, t: ^transform.Transform, allocator: mem.Allocator = context.allocator) -> (cc: Collider) {
+	cc = clone(c, allocator)
+	transform_collider_ref(c, t, &cc)
+	return
+}
+
+transform_collider :: proc{transform_collider_copy, transform_collider_ref}
 
 sphere_overlap :: proc(ca: [3]f32, ra: f32, cb: [3]f32, rb: f32) -> bool {
 	return length(cb - ca) <= ra+rb
@@ -148,30 +190,32 @@ sphere_box_overlap :: proc(ca: [3]f32, ra: f32, minb: [3]f32, maxb: [3]f32) -> b
 	return len2(p - ca) <= ra*ra
 }
 
+//assuming already transformed, if at all.
 collider_overlap :: proc(a: ^Collider, b: ^Collider) -> bool {
-	ae := a.extents
-	be := b.extents
-	//just check boxes for now
-	//if they're both meshes we need to do some SAT or something
-	if a.shape != .Bounding_Sphere && b.shape != .Bounding_Sphere {
-		return box_overlap(ae.mini, ae.maxi, be.mini, be.maxi)
-	}
-	//otherwise one of them is a sphere
-	ra := (ae.maxi.x - ae.mini.x) / 2.0
-	rb := (be.maxi.x - be.mini.x) / 2.0
-	ca := (ae.mini + ae.maxi) / 2.0
-	cb := (be.mini + be.maxi) / 2.0
-	if a.shape == .Bounding_Sphere && b.shape == .Bounding_Sphere {
-		return sphere_overlap(ca, ra, cb, rb)
-	}
-	if a.shape == .Bounding_Sphere && b.shape != .Bounding_Sphere {
-		return sphere_box_overlap(ca, ra, be.mini, be.maxi)
-	}
-	if b.shape == .Bounding_Sphere && a.shape != .Bounding_Sphere {
-		return sphere_box_overlap(cb, rb, ae.mini, ae.maxi)
+	ea := a.extents
+	eb := b.extents
+
+	#partial switch sa in a.shape {
+		case Sphere:
+		#partial switch sb in b.shape {
+			case Sphere:
+			return sphere_overlap(sa.center, sa.radius, sb.center, sb.radius)
+			case Bounding_Box:
+			return sphere_box_overlap(sa.center, sa.radius, eb.mini, eb.maxi)
+		}
+		case Bounding_Box:
+		#partial switch sb in b.shape {
+			case Sphere:
+			return sphere_box_overlap(sb.center, sb.radius, ea.mini, ea.maxi)
+			case Bounding_Box:
+			return box_overlap(ea.mini, ea.maxi, eb.mini, eb.maxi)
+		}
+		//TODO: add tests for capsules & hulls.
+		//modify terrain collision to be usable here as well.
 	}
 
-	return false
+	//if none of our more specific cases work, just check the extents
+	return box_overlap(ea.mini, ea.maxi, eb.mini, eb.maxi)
 }
 
 overlap :: proc{sphere_overlap, box_overlap, sphere_box_overlap, collider_overlap}

@@ -8,23 +8,6 @@ Extents :: struct {
 	maxi: [3]f32,
 }
 
-plane_extents :: proc(planes: []Plane) -> Extents {
-	inf := max(f32)
-	mini := [3]f32{+inf, +inf, +inf}
-	maxi := [3]f32{-inf, -inf, -inf}
-	for p in planes {
-		a := p.points[0]
-		b := p.points[1]
-		c := p.points[2]
-		mini.x = min(mini.x, a.x, b.x, c.x)
-		mini.y = min(mini.y, a.y, b.y, c.y)
-		mini.z = min(mini.z, a.z, b.z, c.z)
-		maxi.x = max(maxi.x, a.x, b.x, c.x)
-		maxi.y = max(maxi.y, a.y, b.y, c.y)
-		maxi.z = max(maxi.z, a.z, b.z, c.z)
-	}
-	return Extents{mini, maxi}
-}
 transform_extents :: proc(e: Extents, t: ^transform.Transform) -> Extents {
 	if t == nil {
 		return e

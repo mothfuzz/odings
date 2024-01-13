@@ -114,6 +114,11 @@ player_update :: proc(a: ^scene.Actor) -> bool {
 
 	gs.set_view(glsl.mat4LookAt((glsl.vec3)(p.camera_pos), (glsl.vec3)(p.trans.position), {0, -1, 0}))
 
+	hits := scene.raycast(a.scene, p.trans.position, {0, 1, 0}, 48)
+	if len(hits) > 0 {
+		//fmt.println("floor actor:", hits[0].id)
+	}
+
 	if gs.key_pressed(gs.Key.L) {
 		color: [3]f32 = {}
 		color.r = rand.float32()
@@ -140,9 +145,13 @@ player_draw :: proc(a: ^scene.Actor) -> bool {
 					   {position=hit.point, color={1, 0, 0, 1}}})
 	}*/
 	for hit in scene.raycast(a.scene, p.trans.position, {0, 1, 0}) {
-		fmt.println(hit.id)
+		//fmt.println(hit.id)
 		gs.draw_lines({{position=p.trans.position, color={0, 1, 0, 1}},
 					   {position=hit.point, color={1, 0, 0, 1}}})
+		//t := p.trans
+		//t.scale = {20, 20, 20}
+		//t.position = hit.point
+		//gs.draw_mesh(&p.obj, &p.mat, transform.mat4(&t))
 	}
 
 	return true

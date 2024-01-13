@@ -43,7 +43,7 @@ testmap_init :: proc(a: ^scene.Actor) -> bool {
 	t.spot = gs.create_spot_light({0, -800, 0}, {0, 1, 0}, {0.6, 0.6, 0.6}, 45)
 
 	mesh := util.collision_mesh(&t.obj)
-	t.col = collision.transform_collider_copy(mesh, &t.trans) //register transformed collider & never update it.
+	t.col = collision.transform_collider(&mesh, &t.trans) //register transformed collider & never update it.
 	collision.delete_collider(&mesh)
 	scene.register_body(a, nil, &t.col, true)
 

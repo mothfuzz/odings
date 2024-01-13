@@ -93,7 +93,7 @@ register_body :: proc(a: ^Actor, t: ^transform.Transform, c: ^collision.Collider
 		tp = t^
 	}
 
-	b := Body{t, c, collision.transform_collider(c^, t), tp, true, a.type_name, make([dynamic][3]i32), solid}
+	b := Body{t, c, collision.transform_collider(c, t), tp, true, a.type_name, make([dynamic][3]i32), solid}
 	a.scene.bodies[a.id] = b
 	update_body(a.scene, a.id)
 }
@@ -225,7 +225,6 @@ colliding :: proc(a: ^Actor, $type: typeid) -> (pass: map[ActorId]^type) {
 							continue
 						}
 						b := cast(^type)(a.scene.actors[id].data)
-						//cb := collision.transform_collider_copy(a.scene.bodies[id].c^, a.scene.bodies[id].t)
 						transform_body(a.scene.bodies[id])
 						cb := a.scene.bodies[id].ct
 						if collision.overlap(&ca, &cb) {
@@ -233,14 +232,11 @@ colliding :: proc(a: ^Actor, $type: typeid) -> (pass: map[ActorId]^type) {
 						} else {
 							fail[id] = {}
 						}
-						//collision.delete_collider(&cb)
 					}
 				}
 			}
 		}
 	}
-
-	//collision.delete_collider(&ca)
 
 	return
 }
@@ -262,12 +258,17 @@ move_against_terrain :: proc(a: ^Actor, velocity: [3]f32, radius: f32 = 0.0) -> 
 			if !other_body.solid {
 				continue
 			}
-			if other_body.c == nil || other_body.c.shape != .Mesh {
+			if other_body.c == nil {
+				continue
+			}
+
+			planes: []collision.Plane = collision.get_planes(&other_body.ct)
+			if planes == nil {
 				continue
 			}
 
 			transform_body(&other_body)
-			v = collision.move_against_terrain(b.t.position, radius, v, other_body.ct.planes)
+			v = collision.move_against_terrain(b.t.position, radius, v, planes)
 		}
 	}
 	return
@@ -282,14 +283,21 @@ raycast :: proc(scene: ^Scene, origin: [3]f32, direction: [3]f32, distance: f32 
 	hits = make([dynamic]RayHit, 0, context.temp_allocator)
 	//TODO: line drawing algorithm to only test bodies in raycast's cells.
 	for id, body in &scene.bodies {
-		if body.c == nil || body.c.shape != .Mesh {
+		if body.c == nil || !body.solid {
+			continue
+		}
+
+		planes: []collision.Plane = collision.get_planes(&body.ct)
+		if planes == nil {
 			continue
 		}
 
 		transform_body(&body)
-		if hit, ok := collision.raycast(origin, direction, body.ct.planes); ok {
-			if distance == 0 || hit.distance <= distance {
-				append(&hits, RayHit{id, hit})
+		for p in planes {
+			if hit, ok := collision.raycast(origin, direction, p); ok {
+				if distance == 0 || hit.distance <= distance {
+					append(&hits, RayHit{id, hit})
+				}
 			}
 		}
 	}

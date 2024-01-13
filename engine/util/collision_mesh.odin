@@ -12,8 +12,10 @@ collision_mesh :: proc(mesh: ^gs.Mesh) -> (c: collision.Collider) {
 		a := mesh.data[i+0].position
 		b := mesh.data[i+1].position
 		c := mesh.data[i+2].position
-		append(&planes, collision.plane(a, b, c))
+		append(&planes, collision.plane({a, b, c}))
 	}
+	fmt.println("created collision mesh:", len(planes))
+	fmt.println(planes[0])
 	c = collision.mesh(planes[:])
 	return
 }
