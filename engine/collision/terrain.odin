@@ -1,7 +1,12 @@
 package collision
 
-inside_triangle_vertices :: proc(p: [3]f32, r2: f32, a, b, c: [3]f32) -> bool {
-	return len2(p - a) <= r2 || len2(p - b) <= r2 || len2(p - c) <= r2
+inside_vertices :: proc(p: [3]f32, r2: f32, plane: Plane) -> bool {
+	for i in plane.points {
+		if len2(p - i) <= r2 {
+			return true
+		}
+	}
+	return false
 }
 sphere_edge :: proc(p: [3]f32, r2: f32, a, b: [3]f32) -> bool {
 	d := b - a
@@ -12,12 +17,15 @@ sphere_edge :: proc(p: [3]f32, r2: f32, a, b: [3]f32) -> bool {
 	}
 	return false
 }
-inside_triangle_edges :: proc(p: [3]f32, r2: f32, a, b, c: [3]f32) -> bool {
-	if sphere_edge(p, r2, a, b) ||
-		sphere_edge(p, r2, b, c) ||
-		sphere_edge(p, r2, c, a) {
+inside_edges :: proc(p: [3]f32, r2: f32, plane: Plane) -> bool {
+	e := len(plane.points)
+	for i in 0..<e {
+		a := plane.points[(i+0)%e]
+		b := plane.points[(i+1)%e]
+		if sphere_edge(p, r2, a, b) {
 			return true
 		}
+	}
 	return false
 }
 
@@ -56,18 +64,13 @@ move_against_terrain :: proc(position: [3]f32, radius: f32, velocity: [3]f32, pl
 		//this gives us a vector from the point perpendicular to the plane
 		//the length of which is the shortest possible distance
 		v := p.normal * dot(dist, p.normal)
-		//TODO: extend this to support ellipses & bounding boxes.
-		//for spheres we do distance check (like this)
-		//for ellipses we do a distance check along the line B-A
-		//for bounding boxes we do a bounds check.
 		r2 := radius * radius
 		if len2(v) <= r2 {
-			a, b, c := tri(p)
 			//find the nearest point on the plane along that vector
-			//then check if the point is actually within the bounds of the triangle
-			if point_in_triangle(pos+v, a, b, c) ||
-				inside_triangle_vertices(pos, r2, a, b, c) ||
-				inside_triangle_edges(pos, r2, a, b, c) {
+			//then check if the point is actually within the bounds of the polygon
+			if line_in_polygon(pos, pos+v, p) ||
+				inside_vertices(pos, r2, p) ||
+				inside_edges(pos, r2, p) {
 					//if colliding with a wall, subtract velocity going in the wall's direction
 					//to prevent movement
 					adj := p.normal * dot(velocity, p.normal) //* 2.0 //bouncy :3

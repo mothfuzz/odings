@@ -29,7 +29,7 @@ coob_init :: proc(a: ^scene.Actor) -> bool {
 	c.trans = transform.origin()
 	transform.translate(&c.trans, {-300, -500, -300})
 	transform.scale(&c.trans, {1000, 1000, 1000})
-	c.col = collision.mesh_box(0.25, 0.25, 0.25)
+	c.col = collision.box(0.25, 0.25, 0.25)
 	scene.register_body(a, &c.trans, &c.col, true)
 
 	fmt.println("coob:", a.id)

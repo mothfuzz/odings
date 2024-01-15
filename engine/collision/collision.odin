@@ -43,43 +43,6 @@ Collider :: struct {
 	extents: Extents,
 }
 
-//this sucks actually, migrate to convex hull asap
-mesh_box :: proc(w, h, d: f32) -> (c: Collider) {
-	v := [][3]f32{
-		// front
-		{-w / 2, -h / 2, +d / 2},
-		{+w / 2, -h / 2, +d / 2},
-		{+w / 2, +h / 2, +d / 2},
-		{-w / 2, +h / 2, +d / 2},
-		// back
-		{-w / 2, -h / 2, -d / 2},
-		{+w / 2, -h / 2, -d / 2},
-		{+w / 2, +h / 2, -d / 2},
-		{-w / 2, +h / 2, -d / 2},
-	}
-	c = mesh([]Plane{
-		// front
-		plane({v[0], v[1], v[2]}),
-		plane({v[2], v[3], v[0]}),
-		// right
-		plane({v[1], v[5], v[6]}),
-		plane({v[6], v[2], v[1]}),
-		// back
-		plane({v[7], v[6], v[5]}),
-		plane({v[5], v[4], v[7]}),
-		// left
-		plane({v[4], v[0], v[3]}),
-		plane({v[3], v[7], v[4]}),
-		// bottom
-		plane({v[4], v[5], v[1]}),
-		plane({v[1], v[0], v[4]}),
-		// top
-		plane({v[3], v[2], v[6]}),
-		plane({v[6], v[7], v[3]}),
-	})
-	return
-}
-
 mesh :: proc(planes: []Plane) -> (c: Collider) {
 	c.shape = Mesh{clone_planes(planes)}
 	c.extents = plane_extents(planes)
