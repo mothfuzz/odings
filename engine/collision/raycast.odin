@@ -1,7 +1,7 @@
 package collision
 import "core:fmt"
 
-RayHit :: struct {
+Ray_Hit :: struct {
 	plane: Plane,
 	point: [3]f32,
 	distance: f32,
@@ -27,7 +27,7 @@ line_in_polygon :: proc(o: [3]f32, p: [3]f32, plane: Plane) -> bool {
 }
 
 //returns whether it hit, and, if it did, where it hit.
-raycast :: proc(origin: [3]f32, direction: [3]f32, p: Plane) -> (RayHit, bool) {
+raycast :: proc(origin: [3]f32, direction: [3]f32, p: Plane) -> (Ray_Hit, bool) {
 	r1 := dot(direction, p.normal)
 	r2 := dot(p.origin - origin, p.normal)
 	t := r2 / r1 //ratio of the 2 projections = distance

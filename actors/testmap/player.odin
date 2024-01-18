@@ -25,7 +25,7 @@ Player :: struct {
 	tex: gs.Texture,
 	mat: gs.Material,
 	//lights
-	ps: [dynamic]gs.PointLight,
+	ps: [dynamic]gs.Point_Light,
 }
 player_init :: proc(a: ^scene.Actor) -> bool {
 	p := cast(^Player)(a.data)
@@ -39,7 +39,7 @@ player_init :: proc(a: ^scene.Actor) -> bool {
 	p.col = collision.bounding_sphere(0.5)
 	scene.register_body(a, &p.trans, &p.col)
 
-	p.ps = make([dynamic]gs.PointLight)
+	p.ps = make([dynamic]gs.Point_Light)
 
 	return true
 }

@@ -6,8 +6,8 @@ import gs "gamesystem"
 import "scene"
 
 Current_Scene : ^scene.Scene
-gamestate_proc :: proc(^scene.Scene)
-init, tick, draw, quit : gamestate_proc
+Gamestate_Proc :: proc(^scene.Scene)
+init, tick, draw, quit : Gamestate_Proc
 
 accumulator : f64
 time : f64
@@ -67,7 +67,7 @@ step :: proc(dt: f64) {
 	gs.draw()
 }
 
-run :: proc(i: gamestate_proc = nil, t: gamestate_proc = nil, d: gamestate_proc = nil, q: gamestate_proc = nil) {
+run :: proc(i: Gamestate_Proc = nil, t: Gamestate_Proc = nil, d: Gamestate_Proc = nil, q: Gamestate_Proc = nil) {
 
 	init = i
 	tick = t

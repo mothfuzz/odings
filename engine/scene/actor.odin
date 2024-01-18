@@ -1,32 +1,32 @@
 package scene
 
-init_func :: proc(^Actor) -> bool
-update_func :: proc(^Actor) -> bool
-draw_func :: proc(^Actor) -> bool
-destroy_func :: proc(^Actor) -> bool
+Init_Proc :: proc(^Actor) -> bool
+Update_Proc :: proc(^Actor) -> bool
+Draw_Proc :: proc(^Actor) -> bool
+Destroy_Proc :: proc(^Actor) -> bool
 
 Spawner :: struct {
-	init: init_func,
-	update: update_func,
-	draw: draw_func,
-	destroy: destroy_func,
+	init: Init_Proc,
+	update: Update_Proc,
+	draw: Draw_Proc,
+	destroy: Destroy_Proc,
 }
 
-ActorId :: u64
+Actor_Id :: u64
 Actor :: struct {
-	id: ActorId,
+	id: Actor_Id,
 	scene: ^Scene,
 	data: rawptr,
 	type_name: string,
-	update: update_func,
-	draw: draw_func,
-	destroy: destroy_func,
+	update: Update_Proc,
+	draw: Draw_Proc,
+	destroy: Destroy_Proc,
 }
 
 import "core:fmt"
 import "core:runtime"
 
-spawn :: proc(scene: ^Scene, data: ^$T, s: Spawner) -> ActorId {
+spawn :: proc(scene: ^Scene, data: ^$T, s: Spawner) -> Actor_Id {
 	type_info := type_info_of(T)
 	named_type: runtime.Type_Info_Named
 	t_ok: bool
@@ -38,7 +38,7 @@ spawn :: proc(scene: ^Scene, data: ^$T, s: Spawner) -> ActorId {
 	fmt.println("type_name:", type_name)
 
 	if scene.actors == nil {
-		scene.actors = make(map[ActorId]^Actor)
+		scene.actors = make(map[Actor_Id]^Actor)
 	}
 	scene.base_id += 1
 	new_actor := new_clone(Actor{scene.base_id, scene, data, type_name, s.update, s.draw, s.destroy})
@@ -51,7 +51,7 @@ spawn :: proc(scene: ^Scene, data: ^$T, s: Spawner) -> ActorId {
 //engine enforced constraints: ID is for when it's others. Actor^ is for when it's self.
 //so, e.g. you can kill another entity via ID
 //but you can't reach in and call 'update_spatial' or w/e on an ID.
-kill :: proc(scene: ^Scene, id: ActorId) {
+kill :: proc(scene: ^Scene, id: Actor_Id) {
 	actor := scene.actors[id]
 	if actor.destroy != nil {
 		actor->destroy()

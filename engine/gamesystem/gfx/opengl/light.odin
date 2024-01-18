@@ -8,7 +8,7 @@ when common.Renderer != "gl" {
 }
 
 
-DirectionalLight :: struct {
+Directional_Light :: struct {
 	direction: [3]f32,
 	color: [3]f32,
 	strength: f32,
@@ -16,7 +16,7 @@ DirectionalLight :: struct {
 }
 
 @(export)
-gs_create_directional_light :: proc(direction: [3]f32, color: [3]f32, strength: f32, shadows: bool = false) -> (d: DirectionalLight) {
+gs_create_directional_light :: proc(direction: [3]f32, color: [3]f32, strength: f32, shadows: bool = false) -> (d: Directional_Light) {
 	d.direction = direction
 	d.color = color
 	d.strength = strength
@@ -27,10 +27,10 @@ gs_create_directional_light :: proc(direction: [3]f32, color: [3]f32, strength: 
 //bump counter
 num_directional_lights : i32 = 0
 num_directional_shadows : i32 = 0
-directional_lights : [dynamic]DirectionalLight = {}
+directional_lights : [dynamic]Directional_Light = {}
 //directional_lights_shadow_array : Texture
 @(export)
-gs_draw_directional_light :: proc(d: ^DirectionalLight) {
+gs_draw_directional_light :: proc(d: ^Directional_Light) {
 	if num_directional_lights < common.Max_Directional_Lights {
 		directional_lights[num_directional_lights] = d^
 		num_directional_lights += 1
@@ -40,7 +40,7 @@ gs_draw_directional_light :: proc(d: ^DirectionalLight) {
 	}
 }
 
-PointLight :: struct {
+Point_Light :: struct {
 	position: [3]f32,
 	color: [3]f32,
 	radius: f32,
@@ -48,7 +48,7 @@ PointLight :: struct {
 }
 
 @(export)
-gs_create_point_light :: proc(position: [3]f32, color: [3]f32, radius: f32, shadows: bool = false) -> (p: PointLight) {
+gs_create_point_light :: proc(position: [3]f32, color: [3]f32, radius: f32, shadows: bool = false) -> (p: Point_Light) {
 	p.position = position
 	p.color = color
 	p.radius = radius
@@ -59,10 +59,10 @@ gs_create_point_light :: proc(position: [3]f32, color: [3]f32, radius: f32, shad
 //bump counter
 num_point_lights : i32 = 0
 num_point_shadows : i32 = 0
-point_lights : [dynamic]PointLight = {}
+point_lights : [dynamic]Point_Light = {}
 //point_lights_shadow_array : Texture
 @(export)
-gs_draw_point_light :: proc(p: ^PointLight) {
+gs_draw_point_light :: proc(p: ^Point_Light) {
 	if num_point_lights < common.Max_Point_Lights {
 		point_lights[num_point_lights] = p^
 		num_point_lights += 1
@@ -72,7 +72,7 @@ gs_draw_point_light :: proc(p: ^PointLight) {
 	}
 }
 
-SpotLight :: struct {
+Spot_Light :: struct {
 	position: [3]f32,
 	direction: [3]f32,
 	color: [3]f32,
@@ -81,7 +81,7 @@ SpotLight :: struct {
 }
 
 @(export)
-gs_create_spot_light :: proc(position: [3]f32, direction: [3]f32, color: [3]f32, angle: f32, shadows: bool = false) -> (s: SpotLight) {
+gs_create_spot_light :: proc(position: [3]f32, direction: [3]f32, color: [3]f32, angle: f32, shadows: bool = false) -> (s: Spot_Light) {
 	s.position = position
 	s.direction = direction
 	s.color = color
@@ -93,10 +93,10 @@ gs_create_spot_light :: proc(position: [3]f32, direction: [3]f32, color: [3]f32,
 //bump counter
 num_spot_lights : i32 = 0
 num_spot_shadows : i32 = 0
-spot_lights : [dynamic]SpotLight = {}
+spot_lights : [dynamic]Spot_Light = {}
 //spot_lights_shadow_array : Texture
 @(export)
-gs_draw_spot_light :: proc(s: ^SpotLight) {
+gs_draw_spot_light :: proc(s: ^Spot_Light) {
 	if num_spot_lights < common.Max_Spot_Lights {
 		spot_lights[num_spot_lights] = s^
 		num_spot_lights += 1
@@ -125,9 +125,9 @@ spot_light_color_uniforms : [dynamic]i32 = {}
 spot_light_shadow_uniforms : [dynamic]i32 = {}
 
 init_program_lights :: proc() {
-	directional_lights = make([dynamic]DirectionalLight, common.Max_Directional_Lights)
-	point_lights = make([dynamic]PointLight, common.Max_Point_Lights)
-	spot_lights = make([dynamic]SpotLight, common.Max_Spot_Lights)
+	directional_lights = make([dynamic]Directional_Light, common.Max_Directional_Lights)
+	point_lights = make([dynamic]Point_Light, common.Max_Point_Lights)
+	spot_lights = make([dynamic]Spot_Light, common.Max_Spot_Lights)
 
 	//light uniforms for our main shader
 	num_directional_lights_uniform = gl.GetUniformLocation(program, "num_directional_lights")

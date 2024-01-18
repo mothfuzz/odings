@@ -9,7 +9,7 @@ import gs "engine/gamesystem"
 import "actors/testmap"
 
 tm: testmap.TestMap
-tid: scene.ActorId
+tid: scene.Actor_Id
 
 //TODO: make a simple font rendering module.
 //maybe do a bespoke sprite renderer first.

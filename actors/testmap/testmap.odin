@@ -20,13 +20,13 @@ TestMap :: struct {
 	norm: gs.Texture,
 	mat: gs.Material,
 	//lights
-	d: gs.DirectionalLight,
-	spot: gs.SpotLight,
+	d: gs.Directional_Light,
+	spot: gs.Spot_Light,
 	//actors
 	player: Player,
-	player_id: scene.ActorId,
+	player_id: scene.Actor_Id,
 	coob: Coob,
-	coob_id: scene.ActorId,
+	coob_id: scene.Actor_Id,
 }
 testmap_init :: proc(a: ^scene.Actor) -> bool {
 	t := cast(^TestMap)(a.data)

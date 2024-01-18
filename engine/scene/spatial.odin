@@ -29,7 +29,7 @@ transform_body :: proc(b: ^Body) {
 cell_size :: 512
 
 //update body's physical location inside the spatial hash.
-update_body :: proc(scene: ^Scene, id: ActorId) {
+update_body :: proc(scene: ^Scene, id: Actor_Id) {
 
 	if _, ok := scene.bodies[id]; !ok {
 		return
@@ -64,7 +64,7 @@ update_body :: proc(scene: ^Scene, id: ActorId) {
 		for y in min_cell.y..=max_cell.y {
 			for z in min_cell.z..=max_cell.z {
 				if _, ok := spatial[{x, y, z}]; !ok {
-					spatial[{x, y, z}] = make(map[ActorId]struct{})
+					spatial[{x, y, z}] = make(map[Actor_Id]struct{})
 				}
 				cell := &spatial[{x, y, z}]
 				cell[id] = {}
@@ -77,13 +77,13 @@ update_body :: proc(scene: ^Scene, id: ActorId) {
 //associate an actor with a body.
 register_body :: proc(a: ^Actor, t: ^transform.Transform, c: ^collision.Collider = nil, solid: bool = false) {
 	if a.scene.bodies == nil {
-		a.scene.bodies = make(map[ActorId]Body)
+		a.scene.bodies = make(map[Actor_Id]Body)
 	}
 	if a.scene.spatial_hash == nil {
-		a.scene.spatial_hash = make(map[string]map[[3]i32]map[ActorId]struct{})
+		a.scene.spatial_hash = make(map[string]map[[3]i32]map[Actor_Id]struct{})
 	}
 	if _, ok := a.scene.spatial_hash[a.type_name]; !ok {
-		a.scene.spatial_hash[a.type_name] = make(map[[3]i32]map[ActorId]struct{})
+		a.scene.spatial_hash[a.type_name] = make(map[[3]i32]map[Actor_Id]struct{})
 	}
 
 	tp: transform.Transform
@@ -141,14 +141,14 @@ place :: proc(a: ^Actor, t: ^transform.Transform) {
 	}
 }
 
-spawn_at :: proc(scene: ^Scene, data: ^$T, s: Spawner, t: ^transform.Transform) -> ActorId {
+spawn_at :: proc(scene: ^Scene, data: ^$T, s: Spawner, t: ^transform.Transform) -> Actor_Id {
 	a := spawn(scene, data, s)
 	place(scene.actors[a], t)
 	return a
 }
 
-nearby :: proc(scene: ^Scene, pos: [3]f32, $type: typeid, radius: f32) -> (r: map[ActorId]^type) {
-	r = make(map[ActorId]^type, 0, context.temp_allocator)
+nearby :: proc(scene: ^Scene, pos: [3]f32, $type: typeid, radius: f32) -> (r: map[Actor_Id]^type) {
+	r = make(map[Actor_Id]^type, 0, context.temp_allocator)
 
 	type_name := fmt.tprint(typeid_of(type))
 	if _, ok := scene.spatial_hash[type_name]; !ok {
@@ -182,10 +182,10 @@ nearby :: proc(scene: ^Scene, pos: [3]f32, $type: typeid, radius: f32) -> (r: ma
 //actors do not transform their own colliders unless they're manually checking collisions themselves.
 //this will transform colliders *only upon checking*.
 //we don't want to do it *all* the time.
-colliding :: proc(a: ^Actor, $type: typeid) -> (pass: map[ActorId]^type) {
+colliding :: proc(a: ^Actor, $type: typeid) -> (pass: map[Actor_Id]^type) {
 	//don't check any collider twice.
-	pass = make(map[ActorId]^type, 0, context.temp_allocator)
-	fail := make(map[ActorId]struct{}, 0, context.temp_allocator)
+	pass = make(map[Actor_Id]^type, 0, context.temp_allocator)
+	fail := make(map[Actor_Id]struct{}, 0, context.temp_allocator)
 
 	type_name := fmt.tprint(typeid_of(type))
 
@@ -274,13 +274,13 @@ move_against_terrain :: proc(a: ^Actor, velocity: [3]f32, radius: f32 = 0.0) -> 
 	return
 }
 
-RayHit :: struct {
-	id: ActorId,
-	using hit: collision.RayHit,
+Ray_Hit :: struct {
+	id: Actor_Id,
+	using hit: collision.Ray_Hit,
 }
 
-raycast :: proc(scene: ^Scene, origin: [3]f32, direction: [3]f32, distance: f32 = 0) -> (hits: [dynamic]RayHit) {
-	hits = make([dynamic]RayHit, 0, context.temp_allocator)
+raycast :: proc(scene: ^Scene, origin: [3]f32, direction: [3]f32, distance: f32 = 0) -> (hits: [dynamic]Ray_Hit) {
+	hits = make([dynamic]Ray_Hit, 0, context.temp_allocator)
 	//TODO: line drawing algorithm to only test bodies in raycast's cells.
 	for id, body in &scene.bodies {
 		if body.c == nil || !body.solid {
@@ -296,7 +296,7 @@ raycast :: proc(scene: ^Scene, origin: [3]f32, direction: [3]f32, distance: f32 
 		for p in planes {
 			if hit, ok := collision.raycast(origin, direction, p); ok {
 				if distance == 0 || hit.distance <= distance {
-					append(&hits, RayHit{id, hit})
+					append(&hits, Ray_Hit{id, hit})
 				}
 			}
 		}

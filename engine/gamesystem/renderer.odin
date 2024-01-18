@@ -10,12 +10,12 @@ import "gfx/opengl"
 when common.Renderer == "gl" {
 	Texture :: opengl.Texture
 	Sampler :: opengl.Sampler
-	DirectionalLight :: opengl.DirectionalLight
-	PointLight :: opengl.PointLight
-	SpotLight :: opengl.SpotLight
+	Directional_Light :: opengl.Directional_Light
+	Point_Light :: opengl.Point_Light
+	Spot_Light :: opengl.Spot_Light
 	Material :: opengl.Material
-	TextureWrap :: opengl.TextureWrap
-	TextureFilter :: opengl.TextureFilter
+	Texture_Wrap :: opengl.Texture_Wrap
+	Texture_Filter :: opengl.Texture_Filter
 	Mesh :: opengl.Mesh
 	Mesh_Error :: opengl.Mesh_Error
 	Texture_Error :: opengl.Texture_Error

@@ -3,11 +3,11 @@ package scene
 Scene :: struct {
 	name: string,
 	//actors table
-	base_id: ActorId,
-	actors: map[ActorId]^Actor,
+	base_id: Actor_Id,
+	actors: map[Actor_Id]^Actor,
 	//spatial data
-	bodies: map[ActorId]Body,
-	spatial_hash: map[string]map[[3]i32]map[ActorId]struct{}, //layers contain cells contain actors.
+	bodies: map[Actor_Id]Body,
+	spatial_hash: map[string]map[[3]i32]map[Actor_Id]struct{}, //layers contain cells contain actors.
 }
 
 import "core:fmt"

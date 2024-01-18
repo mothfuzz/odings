@@ -5,11 +5,11 @@ when common.Renderer != "gl" {
 	//+ignore
 }
 
-TextureWrap :: enum {
+Texture_Wrap :: enum {
 	Clamp,
 	Repeat,
 }
-TextureFilter :: enum {
+Texture_Filter :: enum {
 	Nearest,
 	Trilinear,
 }
@@ -22,13 +22,13 @@ Material :: struct {
 	roughness_tint: [4]f32,
 	metallic: Texture,
 	metallic_tint: [4]f32,
-	texture_wrap: TextureWrap,
-	texture_filter: TextureFilter,
+	texture_wrap: Texture_Wrap,
+	texture_filter: Texture_Filter,
 }
 
 materials: map[string]Material
 
-MaterialInput :: union {
+Material_Input :: union {
 	Texture,
 	[3]f32,
 	[4]f32,
@@ -36,16 +36,16 @@ MaterialInput :: union {
 }
 
 @(export)
-gs_create_textured_material :: proc(resource_name: string, texture: Texture = Blank_Texture, texture_wrap: TextureWrap = .Repeat, texture_filter: TextureFilter = .Nearest) -> Material {
+gs_create_textured_material :: proc(resource_name: string, texture: Texture = Blank_Texture, texture_wrap: Texture_Wrap = .Repeat, texture_filter: Texture_Filter = .Nearest) -> Material {
 	return gs_create_full_material(resource_name, texture, texture_wrap=texture_wrap, texture_filter=texture_filter)
 }
 
 @(export)
 gs_create_shaded_material :: proc(resource_name: string,
-								  color: MaterialInput = nil,
+								  color: Material_Input = nil,
 								  normal: Texture = Blank_Normal,
-								  roughness: MaterialInput = nil,
-								  metallic: MaterialInput = nil,
+								  roughness: Material_Input = nil,
+								  metallic: Material_Input = nil,
 								 ) -> Material {
 	return {}
 }
@@ -59,8 +59,8 @@ gs_create_full_material :: proc(resource_name: string,
 								roughness_tint: [4]f32 = {1, 1, 1, 1},
 								metallic: Texture = Blank_Texture,
 								metallic_tint: [4]f32 = {1, 1, 1, 1},
-								texture_wrap: TextureWrap = .Repeat,
-								texture_filter: TextureFilter = .Trilinear,
+								texture_wrap: Texture_Wrap = .Repeat,
+								texture_filter: Texture_Filter = .Trilinear,
 							   ) -> (m: Material) {
 								   m = {albedo, tint, normal, roughness, roughness_tint, metallic, metallic_tint, texture_wrap, texture_filter}
 	materials[resource_name] = m
