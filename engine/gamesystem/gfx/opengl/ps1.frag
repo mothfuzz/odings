@@ -9,6 +9,8 @@ in vec3 eyedir;
 in mat3 TBN;
 
 uniform bool texture_correct;
+uniform bool depth_prepass;
+uniform bool trans_pass;
 
 uniform sampler2D albedo_texture;
 uniform vec4 albedo_tint;
@@ -73,8 +75,24 @@ void main() {
         f = frag_color/depth;
         uv = frag_texcoord/depth;
     }
+    screen_color = f * texture(albedo_texture, uv) * albedo_tint;
 
-    screen_color = f * texture(albedo_texture, uv);
+    //transparent pixels do not contribute to depth writes.
+    if(depth_prepass) {
+        if(screen_color.a <= 0.9) {
+            discard;
+        }
+        return;
+    }
+
+    //render transparent pixels in a separate pass
+    if(trans_pass && screen_color.a > 0.9) {
+       discard;
+    }
+    if(!trans_pass && screen_color.a <= 0.9) {
+        discard;
+    }
+
     vec3 normal = texture(normal_texture, uv).rgb;
     float roughness = texture(roughness_texture, uv).r;
 

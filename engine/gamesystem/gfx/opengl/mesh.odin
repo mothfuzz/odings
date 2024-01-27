@@ -251,7 +251,7 @@ gs_draw_mesh :: proc(mesh: ^Mesh, material: ^Material, model_transform: matrix[4
 }
 
 //called by draw
-draw_all_meshes :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32, clear_queue: bool) {
+draw_all_meshes :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32) {
 	//perhaps do frustum culling based on view matrix.
 	for filename, mesh in meshes {
 		gl.BindVertexArray(mesh.vao)
@@ -299,9 +299,15 @@ draw_all_meshes :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32, clear_
 			} else {
 				gl.DrawArraysInstanced(gl.TRIANGLES, 0, size, isize)
 			}
-			if clear_queue {
-				resize_soa(&mesh.batches[material], 0)
-			}
+		}
+	}
+}
+
+reset_meshes :: proc() {
+	for name in meshes {
+		mesh := &meshes[name]
+		for material in mesh.batches {
+			resize_soa(&mesh.batches[material], 0)
 		}
 	}
 }

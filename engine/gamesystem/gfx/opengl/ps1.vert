@@ -24,6 +24,7 @@ out mat3 TBN;
 uniform float screen_width;
 uniform float screen_height;
 uniform bool texture_correct;
+uniform bool depth_prepass;
 
 void main() {
 
@@ -33,6 +34,18 @@ void main() {
     gl_Position.xy = gl_Position.xy / vec2(screen_width, screen_height) * 2.0 - vec2(1.0, 1.0);
 
     depth = gl_Position.w;
+
+    if(texture_correct) {
+        frag_texcoord = (texcoord + uv_offset.xy) * uv_offset.zw;
+        frag_color = color;
+    } else {
+        frag_texcoord = (texcoord + uv_offset.xy) * uv_offset.zw * depth;
+        frag_color = color * depth;
+    }
+
+    if(depth_prepass) {
+        return;
+    }
 
     //TBN - camera space to tangent space.
     vec3 n = normalize(normal);
@@ -44,12 +57,4 @@ void main() {
 
     frag_position = vec3(modelview * vec4(position, 1.0));
     eyedir = TBN*(vec3(0, 0, 0) - frag_position);
-
-    if(texture_correct) {
-        frag_texcoord = (texcoord + uv_offset.xy) * uv_offset.zw;
-        frag_color = color;
-    } else {
-        frag_texcoord = (texcoord + uv_offset.xy) * uv_offset.zw * depth;
-        frag_color = color * depth;
-    }
 }

@@ -42,6 +42,8 @@ z2d : f32
 
 //shader params
 program : Program
+program_uniform_depth_prepass : i32
+program_uniform_trans_pass : i32
 program_uniform_texture_correct : i32
 program_uniform_screen_width : i32
 program_uniform_screen_height : i32
@@ -53,6 +55,19 @@ Blank_Normal : Texture
 Material_Sampler : Sampler
 
 clear_color : [4]f32 = {0.5, 0.2, 1.0, 1.0}
+
+
+load_program :: proc(vs_str, fs_str: string) -> (Program, bool) {
+	when ODIN_OS == .JS {
+		vs_str := fmt.tprint("#version 300 es", vs_str, sep="\n")
+		fs_str := fmt.tprint("#version 300 es", fs_str, sep="\n")
+		return gl.CreateProgramFromStrings({vs_str}, {fs_str})
+	} else {
+		vs_str := fmt.tprint("#version 410", vs_str, sep="\n")
+		fs_str := fmt.tprint("#version 410", fs_str, sep="\n")
+		return gl.load_shaders_source(vs_str, fs_str)
+	}
+}
 
 //called in plat.
 init :: proc() {
@@ -71,6 +86,8 @@ init :: proc() {
 	remaining_frag_vectors := max_frag_vectors
 	remaining_frag_vectors -= 7 //material params
 	remaining_frag_vectors -= 1 //texture_correct
+	remaining_frag_vectors -= 1 //depth_prepass
+	remaining_frag_vectors -= 1 //trans_pass
 	remaining_frag_vectors -= 1 //fog_color
 	remaining_frag_vectors -= 3 * common.Max_Directional_Lights
 	fmt.println("available uniform vectors:", remaining_frag_vectors)
@@ -95,25 +112,15 @@ init :: proc() {
 	dl := fmt.tprintf("#define MAX_DIRECTIONAL_LIGHTS %d", common.Max_Directional_Lights)
 	pl := fmt.tprintf("#define MAX_POINT_LIGHTS %d", common.Max_Point_Lights)
 	sl := fmt.tprintf("#define MAX_SPOT_LIGHTS %d", common.Max_Spot_Lights)
-	when ODIN_OS == .JS {
-		vs_str = fmt.tprint("#version 300 es", vs_str, sep="\n")
-		fs_str = fmt.tprint("#version 300 es", dl, pl, sl, fs_str, sep="\n")
-		if p, ok := gl.CreateProgramFromStrings({vs_str}, {fs_str}); ok {
-			program = p
-
-		} else {
-			fmt.eprintln("failed to load shaders")
-		}
+	fs_str = fmt.tprint(dl, pl, sl, fs_str, sep="\n")
+	if p, ok := load_program(vs_str, fs_str); ok {
+		program = p
 	} else {
-		vs_str = fmt.tprint("#version 410", vs_str, sep="\n")
-		fs_str = fmt.tprint("#version 410", dl, pl, sl, fs_str, sep="\n")
-		if p, ok := gl.load_shaders_source(vs_str, fs_str); ok {
-			program = p
-		} else {
-			fmt.eprintln("failed to load shaders")
-		}
+		fmt.eprintln("failed to load main shaders")
 	}
 	gl.UseProgram(program)
+	program_uniform_depth_prepass = gl.GetUniformLocation(program, "depth_prepass")
+	program_uniform_trans_pass = gl.GetUniformLocation(program, "trans_pass")
 	program_uniform_texture_correct = gl.GetUniformLocation(program, "texture_correct")
 	gl.Uniform1i(program_uniform_texture_correct, 1)
 	program_uniform_screen_width = gl.GetUniformLocation(program, "screen_width")
@@ -138,8 +145,8 @@ init :: proc() {
 	//projection = glsl.mat4Perspective(math.PI / 3.0, 4.0 / 3.0, 0.1, 1000)
 	gl.Enable(gl.CULL_FACE)
 	gl.Enable(gl.DEPTH_TEST)
-	//gl.Enable(gl.BLEND)
-	//gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	gl.Enable(gl.BLEND)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 }
 
 //also called in plat
@@ -172,18 +179,38 @@ gs_z2d :: proc() -> f32 {
 @(export)
 gs_draw :: proc() {
 
-	gl.ClearColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a)
-	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-
 	//loop through all lights and draw them depth-only to a texture if they have shadows enabled
 	//draw meshes, draw sprites, untextured
 
+	//depth pre-pass
+	gl.DepthMask(gl.TRUE)
+	gl.DepthFunc(gl.LESS)
+	gl.ColorMask(gl.FALSE, gl.FALSE, gl.FALSE, gl.FALSE)
+	gl.Clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
+	gl.Uniform1i(program_uniform_depth_prepass, 1)
+	draw_all_meshes(view, projection)
+
 	//draw main scene, fully lit
+	gl.ClearColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a)
+	gl.DepthMask(gl.FALSE)
+	gl.DepthFunc(gl.LEQUAL)
+	gl.ColorMask(gl.TRUE, gl.TRUE, gl.TRUE, gl.TRUE)
+	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+	gl.Uniform1i(program_uniform_depth_prepass, 0)
 	apply_lights()
-	draw_all_meshes(view, projection, true)
+
+	//draw opaque pixels, then transparent pixels on top
+	gl.Uniform1i(program_uniform_trans_pass, 0)
+	draw_all_meshes(view, projection)
+	gl.Uniform1i(program_uniform_trans_pass, 1)
+	draw_all_meshes(view, projection)
+
+	reset_meshes()
 
 	//draw lines over everything else, unlit
 	reset_lights()
+	gl.Uniform1i(program_uniform_trans_pass, 0)
 	draw_all_lines(view, projection)
 
 	//draw UI layer, unlit, orthographic perspective.
