@@ -183,18 +183,18 @@ gs_draw :: proc() {
 	//draw meshes, draw sprites, untextured
 
 	//depth pre-pass
-	gl.DepthMask(gl.TRUE)
+	gl.DepthMask(true)
 	gl.DepthFunc(gl.LESS)
-	gl.ColorMask(gl.FALSE, gl.FALSE, gl.FALSE, gl.FALSE)
+	//gl.ColorMask(false, false, false, false)
 	gl.Clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
 	gl.Uniform1i(program_uniform_depth_prepass, 1)
 	draw_all_meshes(view, projection)
 
 	//draw main scene, fully lit
 	gl.ClearColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a)
-	gl.DepthMask(gl.FALSE)
+	gl.DepthMask(false)
 	gl.DepthFunc(gl.LEQUAL)
-	gl.ColorMask(gl.TRUE, gl.TRUE, gl.TRUE, gl.TRUE)
+	//gl.ColorMask(true, true, true, true)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 	gl.Uniform1i(program_uniform_depth_prepass, 0)
