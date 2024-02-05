@@ -17,6 +17,7 @@ lines_vao : VertexArrayObject
 lines_positions : Buffer
 lines_colors : Buffer
 lines_mvps : Buffer
+lines_models: Buffer
 lines : [dynamic]Line
 
 lines_init : bool = false
@@ -29,12 +30,14 @@ init_lines :: proc() {
 		lines_positions = gl.CreateBuffer()
 		lines_colors = gl.CreateBuffer()
 		lines_mvps = gl.CreateBuffer()
+		lines_models = gl.CreateBuffer()
 	} else {
-		buffers: []u32 = {0, 0, 0}
-		gl.GenBuffers(3, raw_data(buffers))
+		buffers: []u32 = {0, 0, 0, 0}
+		gl.GenBuffers(4, raw_data(buffers))
 		lines_positions = buffers[0]
 		lines_colors = buffers[1]
 		lines_mvps = buffers[2]
+		lines_models = buffers[3]
 		gl.GenVertexArrays(1, &lines_vao)
 	}
 
@@ -56,6 +59,17 @@ init_lines :: proc() {
 			index := i32(7+i)
 		} else {
 			index := u32(7+i)
+		}
+		gl.EnableVertexAttribArray(index)
+		gl.VertexAttribPointer(index, 4, gl.FLOAT, false, size_of(matrix[4,4]f32), (uintptr)(i*size_of([4]f32)))
+		gl.VertexAttribDivisor(u32(index), 1)
+	}
+	gl.BindBuffer(gl.ARRAY_BUFFER, lines_models)
+	for i in 0..=3 {
+		when ODIN_OS == .JS {
+			index := i32(11+i)
+		} else {
+			index := u32(11+i)
 		}
 		gl.EnableVertexAttribArray(index)
 		gl.VertexAttribPointer(index, 4, gl.FLOAT, false, size_of(matrix[4,4]f32), (uintptr)(i*size_of([4]f32)))
@@ -97,6 +111,7 @@ draw_all_lines :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32) {
 	gl.ActiveTexture(gl.TEXTURE0)
 	gl.BindTexture(gl.TEXTURE_2D, Blank_Texture)
 	gl.Uniform1i(program_uniform_material.albedo, 0)
+	gl.Uniform4f(program_uniform_material.tint, 1.0, 1.0, 1.0, 1.0)
 
 	for line in &lines {
 		gl.BindBuffer(gl.ARRAY_BUFFER, lines_positions)
@@ -106,6 +121,8 @@ draw_all_lines :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32) {
 		gl.BindBuffer(gl.ARRAY_BUFFER, lines_mvps)
 		mvp := projection * view * line.model_transform
 		gl.BufferData(gl.ARRAY_BUFFER, size_of(matrix[4,4]f32), &mvp, gl.DYNAMIC_DRAW)
+		gl.BindBuffer(gl.ARRAY_BUFFER, lines_models)
+		gl.BufferData(gl.ARRAY_BUFFER, size_of(matrix[4,4]f32), &line.model_transform, gl.DYNAMIC_DRAW)
 		//dammit bill
 		when ODIN_OS == .JS {
 			size := len(line.vertices)

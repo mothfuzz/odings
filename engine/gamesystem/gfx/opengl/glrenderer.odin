@@ -221,6 +221,7 @@ gs_draw :: proc() {
 
 	//draw lines over everything else, unlit
 	reset_lights()
+	apply_lights() //(of which there are 0 at this point)
 	gl.Uniform1i(program_uniform_trans_pass, 0)
 	draw_all_lines(view, projection)
 
