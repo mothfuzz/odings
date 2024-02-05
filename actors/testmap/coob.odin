@@ -22,7 +22,7 @@ coob_init :: proc(a: ^scene.Actor) -> bool {
 	c := cast(^Coob)(a.data)
 
 	c.obj, _ = gs.load_mesh("coob.obj", #load("coob.obj"))
-	c.tex, _ = gs.load_texture("wildbricks/albedo-trans.png", #load("wildbricks/albedo-trans.png"))
+	c.tex, _ = gs.load_texture("wildbricks/albedo-trans.png", #load("wildbricks/albedo.png"))
 	c.norm, _ = gs.load_texture("wildbricks/normal.png", #load("wildbricks/normal.png"))
 	c.rugh, _ = gs.load_texture("wildbricks/glossy.png", #load("wildbricks/glossy.png"))
 	c.mat = gs.create_full_material("gold", albedo=c.tex, normal=c.norm, roughness=c.rugh)

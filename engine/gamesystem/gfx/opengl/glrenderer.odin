@@ -36,6 +36,7 @@ when ODIN_OS == .JS {
 }
 
 //camera
+screen_width, screen_height: i32
 view : matrix[4,4]f32
 projection : matrix[4,4]f32
 z2d : f32
@@ -48,6 +49,9 @@ program_uniform_texture_correct : i32
 program_uniform_screen_width : i32
 program_uniform_screen_height : i32
 program_uniform_fog_color : i32
+program_uniform_view : i32
+
+program_uniform_material : Material_Uniforms
 
 Blank_Texture : Texture
 Blank_Normal : Texture
@@ -57,18 +61,6 @@ Material_Sampler : Sampler
 clear_color : [4]f32 = {0.5, 0.2, 1.0, 1.0}
 
 
-load_program :: proc(vs_str, fs_str: string) -> (Program, bool) {
-	when ODIN_OS == .JS {
-		vs_str := fmt.tprint("#version 300 es", vs_str, sep="\n")
-		fs_str := fmt.tprint("#version 300 es", fs_str, sep="\n")
-		return gl.CreateProgramFromStrings({vs_str}, {fs_str})
-	} else {
-		vs_str := fmt.tprint("#version 410", vs_str, sep="\n")
-		fs_str := fmt.tprint("#version 410", fs_str, sep="\n")
-		return gl.load_shaders_source(vs_str, fs_str)
-	}
-}
-
 //called in plat.
 init :: proc() {
 
@@ -77,48 +69,38 @@ init :: proc() {
 
 	//quality scaling based on capabilities
 	max_frag_vectors: i32
+	max_block_size: i32
+	data_size: i32
 	when ODIN_OS==.JS {
 		max_frag_vectors = gl.GetParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS)
+		max_block_size = gl.GetParameter(gl.MAX_UNIFORM_BLOCK_SIZE)
+		data_size = gl.GetParameter(gl.UNIFORM_BLOCK_DATA_SIZE)
 	} else {
 		gl.GetIntegerv(gl.MAX_FRAGMENT_UNIFORM_VECTORS, &max_frag_vectors)
+		gl.GetIntegerv(gl.MAX_UNIFORM_BLOCK_SIZE, &max_block_size)
+		gl.GetIntegerv(gl.UNIFORM_BLOCK_DATA_SIZE, &data_size)
 	}
 	fmt.println("MAX_FRAGMENT_UNIFORM_VECTORS:", max_frag_vectors)
-	remaining_frag_vectors := max_frag_vectors
-	remaining_frag_vectors -= 7 //material params
-	remaining_frag_vectors -= 1 //texture_correct
-	remaining_frag_vectors -= 1 //depth_prepass
-	remaining_frag_vectors -= 1 //trans_pass
-	remaining_frag_vectors -= 1 //fog_color
-	remaining_frag_vectors -= 3 * common.Max_Directional_Lights
-	fmt.println("available uniform vectors:", remaining_frag_vectors)
-	requested_light_vectors: i32 = common.Max_Point_Lights * 3 + common.Max_Spot_Lights * 4
-	fmt.println("required uniform vectors for lighting:", requested_light_vectors)
-	if requested_light_vectors > remaining_frag_vectors {
-		overage: f32 = f32(remaining_frag_vectors)/f32(requested_light_vectors)
-		common.Max_Point_Lights = i32(f32(common.Max_Point_Lights) * overage)
-		common.Max_Spot_Lights = i32(f32(common.Max_Spot_Lights) * overage)
-		fmt.println("max directional lights:", common.Max_Directional_Lights)
-		fmt.println("adjusted max point lights:", common.Max_Point_Lights)
-		fmt.println("adjusted max spot lights:", common.Max_Spot_Lights)
-	} else {
-		fmt.println("max directional lights:", common.Max_Directional_Lights)
-		fmt.println("max point lights:", common.Max_Point_Lights)
-		fmt.println("max spot lights:", common.Max_Spot_Lights)
-	}
+	fmt.println("MAX_UNIFORM_BLOCK_SIZE:", max_block_size)
+	fmt.println("UNIFORM_BLOCK_DATA_SIZE:", data_size)
 
 	//load our shaders...
 	vs_str: string = #load("ps1.vert")
 	fs_str: string = #load("ps1.frag")
-	dl := fmt.tprintf("#define MAX_DIRECTIONAL_LIGHTS %d", common.Max_Directional_Lights)
-	pl := fmt.tprintf("#define MAX_POINT_LIGHTS %d", common.Max_Point_Lights)
-	sl := fmt.tprintf("#define MAX_SPOT_LIGHTS %d", common.Max_Spot_Lights)
-	fs_str = fmt.tprint(dl, pl, sl, fs_str, sep="\n")
+	when ODIN_OS != .JS {
+		ple := fmt.tprintf("#define PONT_LIGHT_SHADOWS")
+	} else {
+		ple := ""
+	}
+	material_include: string = #load("material.glsl")
+	fs_str = fmt.tprint(ple, material_include, fs_str, sep="\n")
 	if p, ok := load_program(vs_str, fs_str); ok {
 		program = p
 	} else {
 		fmt.eprintln("failed to load main shaders")
 	}
 	gl.UseProgram(program)
+	program_uniform_view = gl.GetUniformLocation(program, "view")
 	program_uniform_depth_prepass = gl.GetUniformLocation(program, "depth_prepass")
 	program_uniform_trans_pass = gl.GetUniformLocation(program, "trans_pass")
 	program_uniform_texture_correct = gl.GetUniformLocation(program, "texture_correct")
@@ -128,7 +110,7 @@ init :: proc() {
 	program_uniform_fog_color = gl.GetUniformLocation(program, "fog_color")
 	gl.Uniform4f(program_uniform_fog_color, clear_color.r, clear_color.g, clear_color.b, clear_color.a)
 
-	init_program_materials()
+	program_uniform_material = get_material_uniforms(program, "material")
 	init_program_lights()
 
 	Blank_Texture, _ = gs_load_texture("blank.png", #load("blank.png"))
@@ -151,6 +133,8 @@ init :: proc() {
 
 //also called in plat
 resize_viewport :: proc "contextless" (width, height: i32) {
+	screen_width = width
+	screen_height = height
 	projection = glsl.mat4Perspective(math.PI / 3.0, f32(width) / f32(height), 0.1, 1024+4096)
 	gl.Viewport(0, 0, width, height)
 	gl.Uniform1f(program_uniform_screen_width, f32(width))
@@ -181,6 +165,18 @@ gs_draw :: proc() {
 
 	//loop through all lights and draw them depth-only to a texture if they have shadows enabled
 	//draw meshes, draw sprites, untextured
+	gl.Uniform1i(program_uniform_depth_prepass, 0)
+	draw_directional_shadows()
+
+	if(false) {
+		reset_lights()
+		reset_meshes()
+		return
+	}
+
+	//reset view
+	gl.Viewport(0, 0, screen_width, screen_height)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
 	//depth pre-pass
 	gl.DepthMask(true)
@@ -196,6 +192,12 @@ gs_draw :: proc() {
 	gl.DepthFunc(gl.LEQUAL)
 	//gl.ColorMask(true, true, true, true)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+	when ODIN_OS == .JS {
+		gl.UniformMatrix4fv(program_uniform_view, view)
+	} else {
+		gl.UniformMatrix4fv(program_uniform_view, 1, false, &view[0][0])
+	}
 
 	gl.Uniform1i(program_uniform_depth_prepass, 0)
 	apply_lights()

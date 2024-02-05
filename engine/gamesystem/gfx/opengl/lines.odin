@@ -96,7 +96,7 @@ draw_all_lines :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32) {
 
 	gl.ActiveTexture(gl.TEXTURE0)
 	gl.BindTexture(gl.TEXTURE_2D, Blank_Texture)
-	gl.Uniform1i(program_uniform_albedo, 0)
+	gl.Uniform1i(program_uniform_material.albedo, 0)
 
 	for line in &lines {
 		gl.BindBuffer(gl.ARRAY_BUFFER, lines_positions)

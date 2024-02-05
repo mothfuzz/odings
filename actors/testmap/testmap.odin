@@ -39,8 +39,8 @@ testmap_init :: proc(a: ^scene.Actor) -> bool {
 	transform.scale(&t.trans, {1000, 1000, 1000})
 	transform.rotatez(&t.trans, math.to_radians_f32(180))
 
-	t.d = gs.create_directional_light({0.5, 1, 0.5}, {1.0, 1.0, 1.0}, 0.5)
-	t.spot = gs.create_spot_light({0, -800, 0}, {0, 1, 0}, {0.6, 0.6, 0.6}, 45)
+	t.d = gs.create_directional_light({0.5, 1, 0.5}, {1.0, 1.0, 1.0}, 0.5, true)
+	t.spot = gs.create_spot_light({0, -800, 0}, {0, 1, 0}, {0.6, 0.6, 0.6}, 45, false)
 
 	mesh := util.collision_mesh(&t.obj)
 	t.col = collision.transform_collider(&mesh, &t.trans) //register transformed collider & never update it.

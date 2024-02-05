@@ -7,6 +7,65 @@ when common.Renderer != "gl" {
 	//+ignore
 }
 
+//Up top: Actual data that gets sent to the uniform buffers.
+max_combined_lights :: 498
+max_spot_lights :: 248
+combined_lights_buffer: Buffer
+spot_lights_buffer: Buffer
+when ODIN_OS == .JS {
+	combined_lights_index: i32 //binding 0
+	spot_lights_index: i32 //binding 1
+} else {
+	combined_lights_index: u32 //binding 0
+	spot_lights_index: u32 //binding 1
+}
+
+Shader_Combined_Light :: struct #align(16) {
+	posdir: [4]f32,
+	color: [4]f32,
+}
+Shader_Combined_Light_Shadowed :: struct #align(16) {
+	posdir: [4]f32,
+	color: [4]f32,
+	viewproj: matrix[4,4]f32,
+}
+directional_lights : [dynamic]Shader_Combined_Light = {}
+directional_lights_shadowed : [dynamic]Shader_Combined_Light_Shadowed = {}
+point_lights : [dynamic]Shader_Combined_Light = {}
+point_lights_shadowed : [dynamic]Shader_Combined_Light = {}
+
+combined_light_available :: proc() -> bool {
+	//bc every non-shadowed directional light takes up 1/3 the space
+	//and we have 166 combined lights total
+	return len(directional_lights) +
+		3 * len(directional_lights_shadowed) +
+		len(point_lights) +
+		len(point_lights_shadowed) < max_combined_lights
+}
+
+Shader_Spot_Light :: struct #align(16) {
+	position: [4]f32,
+	direction: [4]f32,
+	color: [4]f32,
+	padding: [4]f32,
+}
+Shader_Spot_Light_Shadowed :: struct #align(16) {
+	position: [4]f32,
+	direction: [4]f32,
+	color: [4]f32,
+	padding: [4]f32,
+	viewproj: matrix[4,4]f32,
+}
+spot_lights : [dynamic]Shader_Spot_Light = {}
+spot_lights_shadowed : [dynamic]Shader_Spot_Light_Shadowed = {}
+
+spot_light_available :: proc() -> bool {
+	//every non-shadowed spotlight takes up 1/2 the space
+	return len(spot_lights) +
+		2 * len(spot_lights_shadowed) < max_spot_lights
+}
+
+//Then, actual user-facing stuff
 
 Directional_Light :: struct {
 	direction: [3]f32,
@@ -21,21 +80,22 @@ gs_create_directional_light :: proc(direction: [3]f32, color: [3]f32, strength: 
 	d.color = color
 	d.strength = strength
 	d.shadows = shadows
+	if shadows {
+		create_directional_shadow()
+	}
 	return
 }
 
-//bump counter
-num_directional_lights : i32 = 0
-num_directional_shadows : i32 = 0
-directional_lights : [dynamic]Directional_Light = {}
-//directional_lights_shadow_array : Texture
 @(export)
 gs_draw_directional_light :: proc(d: ^Directional_Light) {
-	if num_directional_lights < common.Max_Directional_Lights {
-		directional_lights[num_directional_lights] = d^
-		num_directional_lights += 1
+	if combined_light_available() {
+		posdir : [4]f32 = {d.direction.x, d.direction.y, d.direction.z, 0.0}
+		color : [4]f32 = {d.color.r, d.color.g, d.color.b, d.strength}
 		if d.shadows {
-			num_directional_shadows += 1
+			//avoid calculating viewproj until shadow rendering time
+			append(&directional_lights_shadowed, Shader_Combined_Light_Shadowed{posdir, color, 1})
+		} else {
+			append(&directional_lights, Shader_Combined_Light{posdir, color})
 		}
 	}
 }
@@ -56,18 +116,15 @@ gs_create_point_light :: proc(position: [3]f32, color: [3]f32, radius: f32, shad
 	return
 }
 
-//bump counter
-num_point_lights : i32 = 0
-num_point_shadows : i32 = 0
-point_lights : [dynamic]Point_Light = {}
-//point_lights_shadow_array : Texture
 @(export)
 gs_draw_point_light :: proc(p: ^Point_Light) {
-	if num_point_lights < common.Max_Point_Lights {
-		point_lights[num_point_lights] = p^
-		num_point_lights += 1
+	if combined_light_available() {
+		posdir : [4]f32 = {p.position.x, p.position.y, p.position.z, 1.0}
+		color : [4]f32 = {p.color.r, p.color.g, p.color.b, p.radius}
 		if p.shadows {
-			num_point_shadows += 1
+			append(&point_lights_shadowed, Shader_Combined_Light{posdir, color})
+		} else {
+			append(&point_lights, Shader_Combined_Light{posdir, color})
 		}
 	}
 }
@@ -90,116 +147,159 @@ gs_create_spot_light :: proc(position: [3]f32, direction: [3]f32, color: [3]f32,
 	return
 }
 
-//bump counter
-num_spot_lights : i32 = 0
-num_spot_shadows : i32 = 0
-spot_lights : [dynamic]Spot_Light = {}
-//spot_lights_shadow_array : Texture
 @(export)
 gs_draw_spot_light :: proc(s: ^Spot_Light) {
-	if num_spot_lights < common.Max_Spot_Lights {
-		spot_lights[num_spot_lights] = s^
-		num_spot_lights += 1
+	if spot_light_available() {
+		position : [4]f32 = {s.position.x, s.position.y, s.position.z, 1.0}
+		direction : [4]f32 = {s.direction.x, s.direction.y, s.direction.z, 0.0}
+		color : [4]f32 = {s.color.r, s.color.g, s.color.b, math.cos(math.to_radians(s.angle))}
 		if s.shadows {
-			num_spot_shadows += 1
+			append(&spot_lights_shadowed, Shader_Spot_Light_Shadowed{position, direction, color, {}, 1})
+		} else {
+			append(&spot_lights, Shader_Spot_Light{position, direction, color, {}})
 		}
 	}
 }
 
-//shader params - lights
-//directional
-num_directional_lights_uniform : i32
-directional_light_direction_uniforms : [dynamic]i32 = {}
-directional_light_color_uniforms : [dynamic]i32 = {}
-directional_light_shadow_uniforms : [dynamic]i32 = {}
-//point
-num_point_lights_uniform : i32
-point_light_position_uniforms : [dynamic]i32 = {}
-point_light_color_uniforms : [dynamic]i32 = {}
-point_light_shadow_uniforms : [dynamic]i32 = {}
-//spot
-num_spot_lights_uniform: i32
-spot_light_position_uniforms : [dynamic]i32 = {}
-spot_light_direction_uniforms : [dynamic]i32 = {}
-spot_light_color_uniforms : [dynamic]i32 = {}
-spot_light_shadow_uniforms : [dynamic]i32 = {}
+//shadow samplers
+directional_shadow_texture_uniform : i32
+point_shadow_texture_uniform : i32
+spot_shadow_texture_uniform : i32
+
+import "core:fmt"
 
 init_program_lights :: proc() {
-	directional_lights = make([dynamic]Directional_Light, common.Max_Directional_Lights)
-	point_lights = make([dynamic]Point_Light, common.Max_Point_Lights)
-	spot_lights = make([dynamic]Spot_Light, common.Max_Spot_Lights)
+	directional_lights = make([dynamic]Shader_Combined_Light)
+	directional_lights_shadowed = make([dynamic]Shader_Combined_Light_Shadowed)
+	point_lights = make([dynamic]Shader_Combined_Light)
+	point_lights_shadowed = make([dynamic]Shader_Combined_Light)
+	spot_lights = make([dynamic]Shader_Spot_Light)
+	spot_lights_shadowed = make([dynamic]Shader_Spot_Light_Shadowed)
+
+	directional_shadow_framebuffers = make([dynamic]Framebuffer)
+	spot_shadow_framebuffers = make([dynamic]Framebuffer)
+	point_shadow_framebuffers = make([dynamic]Framebuffer)
+
+	when ODIN_OS == .JS {
+		directional_shadow_texture = {gl.CreateTexture(), gl.CreateTexture()}
+		point_shadow_texture = {gl.CreateTexture(), gl.CreateTexture()}
+		spot_shadow_texture = {gl.CreateTexture(), gl.CreateTexture()}
+	} else {
+		gl.GenTextures(2, &directional_shadow_texture[0])
+		gl.GenTextures(2, &spot_shadow_texture[0])
+		gl.GenTextures(2, &point_shadow_texture[0])
+	}
 
 	//light uniforms for our main shader
-	num_directional_lights_uniform = gl.GetUniformLocation(program, "num_directional_lights")
-	num_point_lights_uniform = gl.GetUniformLocation(program, "num_point_lights")
-	num_spot_lights_uniform = gl.GetUniformLocation(program, "num_spot_lights")
-	directional_light_direction_uniforms = make([dynamic]i32, common.Max_Directional_Lights)
-	directional_light_color_uniforms = make([dynamic]i32, common.Max_Directional_Lights)
-	directional_light_shadow_uniforms = make([dynamic]i32, common.Max_Directional_Lights)
-	for i in 0..< int(common.Max_Directional_Lights) {
-		directional_light_direction_uniforms[i] = uniform_array("directional_lights[%d].direction", i)
-		directional_light_color_uniforms[i] = uniform_array("directional_lights[%d].color", i)
-		directional_light_shadow_uniforms[i] = uniform_array("directional_lights[%d].shadows", i)
+	when ODIN_OS == .JS {
+		combined_lights_buffer = gl.CreateBuffer()
+		spot_lights_buffer = gl.CreateBuffer()
+	} else {
+		gl.GenBuffers(1, &combined_lights_buffer)
+		gl.GenBuffers(1, &spot_lights_buffer)
 	}
-	point_light_position_uniforms = make([dynamic]i32, common.Max_Point_Lights)
-	point_light_color_uniforms = make([dynamic]i32, common.Max_Point_Lights)
-	point_light_shadow_uniforms = make([dynamic]i32, common.Max_Point_Lights)
-	for i in 0..< int(common.Max_Point_Lights) {
-		point_light_position_uniforms[i] = uniform_array("point_lights[%d].position", i)
-		point_light_color_uniforms[i] = uniform_array("point_lights[%d].color", i)
-		point_light_shadow_uniforms[i] = uniform_array("point_lights[%d].shadows", i)
+
+	combined_lights_index = gl.GetUniformBlockIndex(program, "CombinedLights")
+	gl.UniformBlockBinding(program, combined_lights_index, 0)
+	gl.BindBuffer(gl.UNIFORM_BUFFER, combined_lights_buffer)
+	gl.BindBufferBase(gl.UNIFORM_BUFFER, 0, combined_lights_buffer)
+
+	spot_lights_index = gl.GetUniformBlockIndex(program, "SpotLights")
+	gl.UniformBlockBinding(program, spot_lights_index, 1)
+	gl.BindBuffer(gl.UNIFORM_BUFFER, spot_lights_buffer)
+	gl.BindBufferBase(gl.UNIFORM_BUFFER, 1, spot_lights_buffer)
+
+	//shadow uniforms
+	directional_shadow_texture_uniform = gl.GetUniformLocation(program, "directional_light_shadows")
+	fmt.println("directional_shadow_texture_uniform:", directional_shadow_texture_uniform)
+	when ODIN_OS != .JS {
+		point_shadow_texture_uniform = gl.GetUniformLocation(program, "point_light_shadows")
 	}
-	spot_light_position_uniforms = make([dynamic]i32, common.Max_Spot_Lights)
-	spot_light_direction_uniforms = make([dynamic]i32, common.Max_Spot_Lights)
-	spot_light_color_uniforms = make([dynamic]i32, common.Max_Spot_Lights)
-	spot_light_shadow_uniforms = make([dynamic]i32, common.Max_Spot_Lights)
-	for i in 0..< int(common.Max_Spot_Lights) {
-		spot_light_position_uniforms[i] = uniform_array("spot_lights[%d].position", i)
-		spot_light_direction_uniforms[i] = uniform_array("spot_lights[%d].direction", i)
-		spot_light_color_uniforms[i] = uniform_array("spot_lights[%d].color", i)
-		spot_light_shadow_uniforms[i] = uniform_array("spot_lights[%d].shadows", i)
-	}
+	spot_shadow_texture_uniform = gl.GetUniformLocation(program, "spot_light_shadows")
 }
 
 apply_lights :: proc() {
-	gl.Uniform1i(num_directional_lights_uniform, num_directional_lights)
-	for i in 0..<num_directional_lights {
-		d := directional_lights[i].direction
-		direction := (view * [4]f32{d.x, -d.y, d.z, 0.0}).xyz
-		gl.Uniform3f(directional_light_direction_uniforms[i], expand_values(direction))
-		gl.Uniform4f(directional_light_color_uniforms[i], expand_values(directional_lights[i].color), directional_lights[i].strength)
-		gl.Uniform1i(directional_light_shadow_uniforms[i], i32(directional_lights[i].shadows))
+	for i in 0..<len(directional_lights) {
+		directional_lights[i].posdir.y = -directional_lights[i].posdir.y
+		directional_lights[i].posdir = view * directional_lights[i].posdir
 	}
-	gl.Uniform1i(num_point_lights_uniform, num_point_lights)
-	for i in 0..<num_point_lights {
-		p := point_lights[i].position
-		position := (view * [4]f32{p.x, p.y, p.z, 1.0}).xyz
-		gl.Uniform3f(point_light_position_uniforms[i], expand_values(position))
-		gl.Uniform4f(point_light_color_uniforms[i], expand_values(point_lights[i].color), point_lights[i].radius)
-		gl.Uniform1i(point_light_shadow_uniforms[i], i32(point_lights[i].shadows))
+	for i in 0..<len(directional_lights_shadowed) {
+		directional_lights_shadowed[i].posdir.y = -directional_lights_shadowed[i].posdir.y
+		directional_lights_shadowed[i].posdir = view * directional_lights_shadowed[i].posdir
 	}
-	gl.Uniform1i(num_spot_lights_uniform, num_spot_lights)
-	for i in 0..<num_spot_lights {
-		p := spot_lights[i].position
-		position := (view * [4]f32{p.x, p.y, p.z, 1.0}).xyz
-		gl.Uniform3f(spot_light_position_uniforms[i], expand_values(position))
-		d := spot_lights[i].direction
-		direction := (view * [4]f32{d.x, d.y, d.z, 0.0}).xyz
-		gl.Uniform3f(spot_light_direction_uniforms[i], expand_values(direction))
-		gl.Uniform4f(spot_light_color_uniforms[i], expand_values(spot_lights[i].color), math.cos(math.to_radians(spot_lights[i].angle)))
-		gl.Uniform1i(spot_light_shadow_uniforms[i], i32(spot_lights[i].shadows))
+	for i in 0..<len(point_lights) {
+		point_lights[i].posdir = view * point_lights[i].posdir
+	}
+	for i in 0..<len(point_lights_shadowed) {
+		point_lights_shadowed[i].posdir = view * point_lights_shadowed[i].posdir
+	}
+	for i in 0..<len(spot_lights) {
+		//spot_lights[i].direction.y = -spot_lights[i].direction.y
+		spot_lights[i].position = view * spot_lights[i].position
+		spot_lights[i].direction = view * spot_lights[i].direction
+	}
+	for i in 0..<len(spot_lights_shadowed) {
+		//spot_lights_shadowed[i].direction.y = -spot_lights_shadowed[i].direction.y
+		spot_lights_shadowed[i].position = view * spot_lights_shadowed[i].position
+		spot_lights_shadowed[i].direction = view * spot_lights_shadowed[i].direction
+	}
+
+	gl.BindBuffer(gl.UNIFORM_BUFFER, combined_lights_buffer)
+	dls_size := len(directional_lights_shadowed) * size_of(Shader_Combined_Light_Shadowed)
+	dl_size := len(directional_lights) * size_of(Shader_Combined_Light)
+	pls_size := len(point_lights_shadowed) * size_of(Shader_Combined_Light)
+	pl_size := len(point_lights) * size_of(Shader_Combined_Light)
+	lengths_size := size_of([4]i32)
+
+	gl.BufferData(gl.UNIFORM_BUFFER, lengths_size + dls_size + dl_size + pls_size + pl_size, nil, gl.DYNAMIC_DRAW)
+	offset := 0
+	sizes := [4]i32{i32(len(directional_lights_shadowed)), i32(len(directional_lights)), i32(len(point_lights_shadowed)), i32(len(point_lights))}
+	gl.BufferSubData(gl.UNIFORM_BUFFER, ot(offset), lengths_size, &sizes[0])
+	offset += lengths_size
+	gl.BufferSubData(gl.UNIFORM_BUFFER, ot(offset), dls_size, raw_data(directional_lights_shadowed))
+	offset += dls_size
+	gl.BufferSubData(gl.UNIFORM_BUFFER, ot(offset), dl_size, raw_data(directional_lights))
+	offset += dl_size
+	gl.BufferSubData(gl.UNIFORM_BUFFER, ot(offset), pls_size, raw_data(point_lights_shadowed))
+	offset += pls_size
+	gl.BufferSubData(gl.UNIFORM_BUFFER, ot(offset), pl_size, raw_data(point_lights))
+
+	gl.BindBuffer(gl.UNIFORM_BUFFER, spot_lights_buffer)
+	sls_size := len(spot_lights_shadowed) * size_of(Shader_Spot_Light_Shadowed)
+	sl_size := len(spot_lights) * size_of(Shader_Spot_Light)
+
+	gl.BufferData(gl.UNIFORM_BUFFER, lengths_size + sls_size + sl_size, nil, gl.DYNAMIC_DRAW)
+	offset = 0
+	ssizes := [4]i32{i32(len(spot_lights_shadowed)), i32(len(spot_lights)), 0, 0}
+	gl.BufferSubData(gl.UNIFORM_BUFFER, ot(offset), lengths_size, &ssizes[0])
+	offset += lengths_size
+	gl.BufferSubData(gl.UNIFORM_BUFFER, ot(offset), sls_size, raw_data(spot_lights_shadowed))
+	offset += sls_size
+	gl.BufferSubData(gl.UNIFORM_BUFFER, ot(offset), sl_size, raw_data(spot_lights))
+
+	gl.ActiveTexture(gl.TEXTURE4)
+	gl.BindTexture(gl.TEXTURE_2D_ARRAY, directional_shadow_texture[1])
+	gl.Uniform1i(directional_shadow_texture_uniform, 4)
+	//gl.ActiveTexture(gl.TEXTURE5)
+	//gl.ActiveTexture(gl.TEXTURE6)
+}
+
+//again I say, dammit bill.
+when ODIN_OS == .JS {
+	ot :: proc(a: int) -> uintptr {
+		return uintptr(a)
+	}
+} else {
+	ot :: proc(a: int) -> int {
+		return a
 	}
 }
 
 reset_lights :: proc() {
-	num_point_lights = 0;
-	num_directional_lights = 0;
-	num_spot_lights = 0;
-	gl.Uniform1i(num_point_lights_uniform, 0)
-	gl.Uniform1i(num_directional_lights_uniform, 0)
-	gl.Uniform1i(num_spot_lights_uniform, 0)
+	clear(&directional_lights)
+	clear(&directional_lights_shadowed)
+	clear(&point_lights)
+	clear(&point_lights_shadowed)
+	clear(&spot_lights)
+	clear(&spot_lights_shadowed)
 }
-
-//load up position-only program to render shadow buffers
-//create... a LOT of framebuffers
-//set up all texture attachments (all depth-only)...

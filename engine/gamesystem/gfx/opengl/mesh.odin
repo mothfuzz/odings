@@ -31,7 +31,7 @@ Mesh :: struct {
 	indices: Buffer,
 	//instance buffers
 	mvps: Buffer,
-	modelviews: Buffer,
+	models: Buffer,
 	uv_offsets: Buffer,
 	//draw data
 	batches: ^map[Material]#soa[dynamic]Instance,
@@ -147,7 +147,7 @@ gs_load_mesh_vertices :: proc(filename: string, data: #soa[]common.Vertex, indic
 		mesh.normals = gl.CreateBuffer()
 		mesh.tangents = gl.CreateBuffer()
 		mesh.mvps = gl.CreateBuffer()
-		mesh.modelviews = gl.CreateBuffer()
+		mesh.models = gl.CreateBuffer()
 		mesh.uv_offsets = gl.CreateBuffer()
 	} else {
 		buffers: []u32 = {0, 0, 0, 0, 0, 0, 0, 0}
@@ -158,7 +158,7 @@ gs_load_mesh_vertices :: proc(filename: string, data: #soa[]common.Vertex, indic
 		mesh.normals = buffers[3]
 		mesh.tangents = buffers[4]
 		mesh.mvps = buffers[5]
-		mesh.modelviews = buffers[6]
+		mesh.models = buffers[6]
 		mesh.uv_offsets = buffers[7]
 		gl.GenVertexArrays(1, &mesh.vao)
 	}
@@ -216,7 +216,7 @@ gs_load_mesh_vertices :: proc(filename: string, data: #soa[]common.Vertex, indic
 		gl.VertexAttribDivisor(u32(index), 1)
 	}
 
-	gl.BindBuffer(gl.ARRAY_BUFFER, mesh.modelviews)
+	gl.BindBuffer(gl.ARRAY_BUFFER, mesh.models)
 	for i in 0..=3 {
 		when ODIN_OS == .JS {
 			index := i32(11+i)
@@ -265,21 +265,21 @@ draw_all_meshes :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32) {
 		//fmt.println("mesh currently has this many batches:", len(mesh.batches))
 		for material, instances in mesh.batches {
 			//assign all material variables
-			apply_material(material)
+			apply_material(material, program_uniform_material)
 
 			//load up the instance buffer
 			mvps := make([]matrix[4,4]f32, len(instances))
 			defer(delete(mvps))
-			modelviews := make([]matrix[4,4]f32, len(instances))
-			defer(delete(modelviews))
+			models := make([]matrix[4,4]f32, len(instances))
+			defer(delete(models))
 			for instance, i in &instances {
 				mvps[i] = projection * view * instance.model
-				modelviews[i] = view * instance.model
+				models[i] = instance.model
 			}
 			gl.BindBuffer(gl.ARRAY_BUFFER, mesh.mvps)
 			gl.BufferData(gl.ARRAY_BUFFER, len(instances) * size_of(matrix[4,4]f32), &mvps[0][0], gl.DYNAMIC_DRAW)
-			gl.BindBuffer(gl.ARRAY_BUFFER, mesh.modelviews)
-			gl.BufferData(gl.ARRAY_BUFFER, len(instances) * size_of(matrix[4,4]f32), &modelviews[0][0], gl.DYNAMIC_DRAW)
+			gl.BindBuffer(gl.ARRAY_BUFFER, mesh.models)
+			gl.BufferData(gl.ARRAY_BUFFER, len(instances) * size_of(matrix[4,4]f32), &models[0][0], gl.DYNAMIC_DRAW)
 			gl.BindBuffer(gl.ARRAY_BUFFER, mesh.uv_offsets)
 			gl.BufferData(gl.ARRAY_BUFFER, len(instances) * size_of([4]f32), instances.uv_offset, gl.DYNAMIC_DRAW)
 			gl.BindBuffer(gl.ARRAY_BUFFER, 0)

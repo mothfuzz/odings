@@ -2,8 +2,7 @@ package common
 
 Renderer :: #config(RENDERER, "gl")
 
-Max_Directional_Lights: i32 = 128
-Max_Point_Lights: i32 = 128
-Max_Spot_Lights: i32 = 128
-
 //shadow map resolution, number of cascades, etc...
+Directional_Shadow_Resolution : i32 = 4096
+Spot_Shadow_Resolution : i32 = 128
+Point_Shadow_Resolution : i32 = 128
