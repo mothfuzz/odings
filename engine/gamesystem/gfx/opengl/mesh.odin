@@ -251,7 +251,7 @@ gs_draw_mesh :: proc(mesh: ^Mesh, material: ^Material, model_transform: matrix[4
 }
 
 //called by draw
-draw_all_meshes :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32) {
+draw_all_meshes :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32, shader_material: Material_Uniforms) {
 	//perhaps do frustum culling based on view matrix.
 	for filename, mesh in meshes {
 		gl.BindVertexArray(mesh.vao)
@@ -265,7 +265,7 @@ draw_all_meshes :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32) {
 		//fmt.println("mesh currently has this many batches:", len(mesh.batches))
 		for material, instances in mesh.batches {
 			//assign all material variables
-			apply_material(material, program_uniform_material)
+			apply_material(material, shader_material)
 
 			//load up the instance buffer
 			mvps := make([]matrix[4,4]f32, len(instances))

@@ -53,6 +53,9 @@ program_uniform_view : i32
 
 program_uniform_material : Material_Uniforms
 
+shadow_program : Program
+shadow_uniform_material : Material_Uniforms
+
 Blank_Texture : Texture
 Blank_Normal : Texture
 
@@ -84,7 +87,7 @@ init :: proc() {
 	vs_str: string = #load("ps1.vert")
 	fs_str: string = #load("ps1.frag")
 	when ODIN_OS != .JS {
-		ple := fmt.tprintf("#define PONT_LIGHT_SHADOWS")
+		ple := fmt.tprintf("#define POINT_LIGHT_SHADOWS")
 	} else {
 		ple := ""
 	}
@@ -108,6 +111,17 @@ init :: proc() {
 
 	program_uniform_material = get_material_uniforms(program, "material")
 	init_program_lights()
+
+	shadow_vs_str: string = #load("shadow.vert")
+	shadow_fs_str: string = #load("shadow.frag")
+	shadow_fs_str = fmt.tprint(material_include, shadow_fs_str, sep="\n")
+	if p, ok := load_program(shadow_vs_str, shadow_fs_str); ok {
+		shadow_program = p
+	} else {
+		fmt.eprintln("failed to load shadow shaders")
+	}
+	gl.UseProgram(shadow_program)
+	shadow_uniform_material = get_material_uniforms(shadow_program, "material")
 
 	Blank_Texture, _ = gs_load_texture("blank.png", #load("blank.png"))
 	Blank_Normal, _ = gs_load_texture("blank_normal.png", #load("blank_normal.png"))
@@ -161,14 +175,13 @@ gs_draw :: proc() {
 
 	//loop through all lights and draw them depth-only to a texture if they have shadows enabled
 	//draw meshes, draw sprites, untextured
-	gl.Uniform1i(program_uniform_depth_prepass, 0)
-	draw_directional_shadows()
+	gl.UseProgram(shadow_program)
+	draw_directional_shadows(shadow_uniform_material)
+	//draw_point_shadows
+	//draw_spot_shadows
 
-	if(false) {
-		reset_lights()
-		reset_meshes()
-		return
-	}
+	//start main program
+	gl.UseProgram(program)
 
 	//reset view
 	gl.Viewport(0, 0, screen_width, screen_height)
@@ -180,7 +193,7 @@ gs_draw :: proc() {
 	//gl.ColorMask(false, false, false, false)
 	gl.Clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
 	gl.Uniform1i(program_uniform_depth_prepass, 1)
-	draw_all_meshes(view, projection)
+	draw_all_meshes(view, projection, program_uniform_material)
 
 	//draw main scene, fully lit
 	gl.ClearColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a)
@@ -200,9 +213,9 @@ gs_draw :: proc() {
 
 	//draw opaque pixels, then transparent pixels on top
 	gl.Uniform1i(program_uniform_trans_pass, 0)
-	draw_all_meshes(view, projection)
+	draw_all_meshes(view, projection, program_uniform_material)
 	gl.Uniform1i(program_uniform_trans_pass, 1)
-	draw_all_meshes(view, projection)
+	draw_all_meshes(view, projection, program_uniform_material)
 
 	reset_meshes()
 

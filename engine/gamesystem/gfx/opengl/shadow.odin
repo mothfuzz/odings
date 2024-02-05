@@ -67,8 +67,7 @@ create_directional_shadow :: proc() {
 
 import "core:math/linalg/glsl"
 
-shadow_program : Program
-draw_directional_shadows :: proc() {
+draw_directional_shadows :: proc(shader_material: Material_Uniforms) {
 	res := common.Directional_Shadow_Resolution
 	size := 2048
 	gl.Viewport(0, 0, res, res)
@@ -102,7 +101,7 @@ draw_directional_shadows :: proc() {
 
 		directional_lights_shadowed[i].viewproj = projection * view
 
-		draw_all_meshes(view, projection) //<- need to modify this to use material params associated with current program object
+		draw_all_meshes(view, projection, shader_material) //<- need to modify this to use material params associated with current program object
 		//maybe use a struct for them
 	}
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
