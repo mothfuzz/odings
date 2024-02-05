@@ -70,19 +70,15 @@ init :: proc() {
 	//quality scaling based on capabilities
 	max_frag_vectors: i32
 	max_block_size: i32
-	data_size: i32
 	when ODIN_OS==.JS {
 		max_frag_vectors = gl.GetParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS)
 		max_block_size = gl.GetParameter(gl.MAX_UNIFORM_BLOCK_SIZE)
-		data_size = gl.GetParameter(gl.UNIFORM_BLOCK_DATA_SIZE)
 	} else {
 		gl.GetIntegerv(gl.MAX_FRAGMENT_UNIFORM_VECTORS, &max_frag_vectors)
 		gl.GetIntegerv(gl.MAX_UNIFORM_BLOCK_SIZE, &max_block_size)
-		gl.GetIntegerv(gl.UNIFORM_BLOCK_DATA_SIZE, &data_size)
 	}
 	fmt.println("MAX_FRAGMENT_UNIFORM_VECTORS:", max_frag_vectors)
 	fmt.println("MAX_UNIFORM_BLOCK_SIZE:", max_block_size)
-	fmt.println("UNIFORM_BLOCK_DATA_SIZE:", data_size)
 
 	//load our shaders...
 	vs_str: string = #load("ps1.vert")

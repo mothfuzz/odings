@@ -251,7 +251,11 @@ apply_lights :: proc() {
 	pl_size := len(point_lights) * size_of(Shader_Combined_Light)
 	lengths_size := size_of([4]i32)
 
-	gl.BufferData(gl.UNIFORM_BUFFER, lengths_size + dls_size + dl_size + pls_size + pl_size, nil, gl.DYNAMIC_DRAW)
+	when ODIN_OS == .JS {
+		gl.BufferData(gl.UNIFORM_BUFFER, lengths_size + max_combined_lights * size_of(Shader_Combined_Light), nil, gl.DYNAMIC_DRAW)
+	} else {
+		gl.BufferData(gl.UNIFORM_BUFFER, lengths_size + dls_size + dl_size + pls_size + pl_size, nil, gl.DYNAMIC_DRAW)
+	}
 	offset := 0
 	sizes := [4]i32{i32(len(directional_lights_shadowed)), i32(len(directional_lights)), i32(len(point_lights_shadowed)), i32(len(point_lights))}
 	gl.BufferSubData(gl.UNIFORM_BUFFER, ot(offset), lengths_size, &sizes[0])
@@ -268,7 +272,11 @@ apply_lights :: proc() {
 	sls_size := len(spot_lights_shadowed) * size_of(Shader_Spot_Light_Shadowed)
 	sl_size := len(spot_lights) * size_of(Shader_Spot_Light)
 
-	gl.BufferData(gl.UNIFORM_BUFFER, lengths_size + sls_size + sl_size, nil, gl.DYNAMIC_DRAW)
+	when ODIN_OS == .JS {
+		gl.BufferData(gl.UNIFORM_BUFFER, lengths_size + max_spot_lights * size_of(Shader_Spot_Light), nil, gl.DYNAMIC_DRAW)
+	} else {
+		gl.BufferData(gl.UNIFORM_BUFFER, lengths_size + sls_size + sl_size, nil, gl.DYNAMIC_DRAW)
+	}
 	offset = 0
 	ssizes := [4]i32{i32(len(spot_lights_shadowed)), i32(len(spot_lights)), 0, 0}
 	gl.BufferSubData(gl.UNIFORM_BUFFER, ot(offset), lengths_size, &ssizes[0])
