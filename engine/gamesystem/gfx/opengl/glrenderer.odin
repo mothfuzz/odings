@@ -163,7 +163,7 @@ gs_set_view :: proc(v: matrix[4,4]f32) {
 }
 @(export)
 gs_transform_camera :: proc(t: matrix[4,4]f32) {
-	view = inverse(t)
+	view = glsl.inverse(t)
 }
 @(export)
 gs_z2d :: proc() -> f32 {
@@ -187,13 +187,16 @@ gs_draw :: proc() {
 	gl.Viewport(0, 0, screen_width, screen_height)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
+	//prepare instances
+	prepare_instances(view, projection)
+
 	//depth pre-pass
 	gl.DepthMask(true)
 	gl.DepthFunc(gl.LESS)
 	//gl.ColorMask(false, false, false, false)
 	gl.Clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
 	gl.Uniform1i(program_uniform_depth_prepass, 1)
-	draw_all_meshes(view, projection, program_uniform_material)
+	draw_all_meshes(program_uniform_material)
 
 	//draw main scene, fully lit
 	gl.ClearColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a)
@@ -213,9 +216,9 @@ gs_draw :: proc() {
 
 	//draw opaque pixels, then transparent pixels on top
 	gl.Uniform1i(program_uniform_trans_pass, 0)
-	draw_all_meshes(view, projection, program_uniform_material)
+	draw_all_meshes(program_uniform_material)
 	gl.Uniform1i(program_uniform_trans_pass, 1)
-	draw_all_meshes(view, projection, program_uniform_material)
+	draw_all_meshes(program_uniform_material)
 
 	reset_meshes()
 

@@ -54,17 +54,17 @@ rotate :: proc(t: ^Transform, v: [3]f32) {
 }
 //rotate around global axes
 rotatex :: proc(t: ^Transform, angle: f32) {
-	t.orientation = quaternion(glsl.cos(angle * 0.5), glsl.sin(angle * 0.5), f32(0), f32(0)) * t.orientation
+	t.orientation = quaternion(w=glsl.cos(angle * 0.5), x=glsl.sin(angle * 0.5), y=f32(0), z=f32(0)) * t.orientation
 }
 rotatey :: proc(t: ^Transform, angle: f32) {
-	t.orientation = quaternion(glsl.cos(angle * 0.5), f32(0), glsl.sin(angle * 0.5), f32(0)) * t.orientation
+	t.orientation = quaternion(w=glsl.cos(angle * 0.5), x=f32(0), y=glsl.sin(angle * 0.5), z=f32(0)) * t.orientation
 }
 rotatez :: proc(t: ^Transform, angle: f32) {
-	t.orientation = quaternion(glsl.cos(angle * 0.5), f32(0), f32(0), glsl.sin(angle * 0.5)) * t.orientation
+	t.orientation = quaternion(w=glsl.cos(angle * 0.5), x=f32(0), y=f32(0), z=glsl.sin(angle * 0.5)) * t.orientation
 }
 rotate_axis :: proc(t: ^Transform, axis: [3]f32, angle: f32) {
 	c, s := glsl.cos(angle / 2.0), glsl.sin(angle / 2.0)
-	t.orientation = quaternion(c, s*axis.x, s*axis.y, s*axis.z) * t.orientation
+	t.orientation = quaternion(w=c, x=s*axis.x, y=s*axis.y, z=s*axis.z) * t.orientation
 }
 scale :: proc(t: ^Transform, v: [3]f32) {
 	t.scale *= v
@@ -72,7 +72,7 @@ scale :: proc(t: ^Transform, v: [3]f32) {
 origin :: proc() -> Transform {
 	return {
 		{0, 0, 0},
-		quaternion(1, 0, 0, 0),
+		quaternion(w=1, x=0, y=0, z=0),
 		{1, 1, 1},
 	}
 }

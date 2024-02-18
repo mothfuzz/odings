@@ -13,6 +13,7 @@ when common.Renderer != "gl" {
 //soa instance data
 Instance :: struct {
 	model: matrix[4,4]f32, //local to world
+	mvp: matrix[4, 4]f32,
 	uv_offset: [4]f32,
 }
 
@@ -247,12 +248,23 @@ gs_draw_mesh :: proc(mesh: ^Mesh, material: ^Material, model_transform: matrix[4
 		fmt.println("no batch for u >:3")
 		mesh.batches[material] = make_soa(#soa[dynamic]Instance)
 	}
-	append_soa(&mesh.batches[material], Instance{model_transform, texture_region})
+	append_soa(&mesh.batches[material], Instance{model=model_transform, uv_offset=texture_region})
+}
+
+prepare_instances :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32) {
+	for filename, mesh in meshes {
+		gl.BindVertexArray(mesh.vao)
+		for material, instances in mesh.batches {
+			//TODO: perform frustum culling here to remove from the batch
+			for instance, i in &instances {
+				instance.mvp = projection * view * instance.model
+			}
+		}
+	}
 }
 
 //called by draw
-draw_all_meshes :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32, shader_material: Material_Uniforms) {
-	//perhaps do frustum culling based on view matrix.
+draw_all_meshes :: proc(shader_material: Material_Uniforms) {
 	for filename, mesh in meshes {
 		gl.BindVertexArray(mesh.vao)
 		//dammit bill
@@ -267,19 +279,11 @@ draw_all_meshes :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32, shader
 			//assign all material variables
 			apply_material(material, shader_material)
 
-			//load up the instance buffer
-			mvps := make([]matrix[4,4]f32, len(instances))
-			defer(delete(mvps))
-			models := make([]matrix[4,4]f32, len(instances))
-			defer(delete(models))
-			for instance, i in &instances {
-				mvps[i] = projection * view * instance.model
-				models[i] = instance.model
-			}
+			//load up the instance data
 			gl.BindBuffer(gl.ARRAY_BUFFER, mesh.mvps)
-			gl.BufferData(gl.ARRAY_BUFFER, len(instances) * size_of(matrix[4,4]f32), &mvps[0][0], gl.DYNAMIC_DRAW)
+			gl.BufferData(gl.ARRAY_BUFFER, len(instances) * size_of(matrix[4,4]f32), instances.mvp, gl.DYNAMIC_DRAW)
 			gl.BindBuffer(gl.ARRAY_BUFFER, mesh.models)
-			gl.BufferData(gl.ARRAY_BUFFER, len(instances) * size_of(matrix[4,4]f32), &models[0][0], gl.DYNAMIC_DRAW)
+			gl.BufferData(gl.ARRAY_BUFFER, len(instances) * size_of(matrix[4,4]f32), instances.model, gl.DYNAMIC_DRAW)
 			gl.BindBuffer(gl.ARRAY_BUFFER, mesh.uv_offsets)
 			gl.BufferData(gl.ARRAY_BUFFER, len(instances) * size_of([4]f32), instances.uv_offset, gl.DYNAMIC_DRAW)
 			gl.BindBuffer(gl.ARRAY_BUFFER, 0)

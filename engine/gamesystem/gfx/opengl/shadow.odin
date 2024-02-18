@@ -73,7 +73,7 @@ draw_directional_shadows :: proc(shader_material: Material_Uniforms) {
 	gl.Viewport(0, 0, res, res)
 	//gl.UseProgram(shadow_program)
 	projection: matrix[4,4]f32 = glsl.mat4Ortho3d(f32(-size), f32(size), f32(-size), f32(size), 0.1, 1024+4096)
-	camera_position: [3]f32 = inverse(view)[3].xyz
+	camera_position: [3]f32 = glsl.inverse(view)[3].xyz
 
 	//set blend mode to multiply
 	//it's fine to have depth test cancellation, if there's an opaque object before or after then the shadow will be opaque naturally
@@ -101,7 +101,8 @@ draw_directional_shadows :: proc(shader_material: Material_Uniforms) {
 
 		directional_lights_shadowed[i].viewproj = projection * view
 
-		draw_all_meshes(view, projection, shader_material) //<- need to modify this to use material params associated with current program object
+		prepare_instances(view, projection)
+		draw_all_meshes(shader_material) //<- need to modify this to use material params associated with current program object
 		//maybe use a struct for them
 	}
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
