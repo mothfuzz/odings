@@ -21,6 +21,8 @@ TestMap :: struct {
 	mat: gs.Material,
 	//lights
 	d: gs.Directional_Light,
+	d2: gs.Directional_Light,
+	d3: gs.Directional_Light,
 	spot: gs.Spot_Light,
 	//actors
 	player: Player,
@@ -39,7 +41,9 @@ testmap_init :: proc(a: ^scene.Actor) -> bool {
 	transform.scale(&t.trans, {1000, 1000, 1000})
 	transform.rotatez(&t.trans, math.to_radians_f32(180))
 
-	t.d = gs.create_directional_light({0.5, 1, 0.5}, {1.0, 1.0, 1.0}, 0.5, true)
+	t.d = gs.create_directional_light({0.5, 1, 0.5}, {1.0, 1.0, 1.0}, 0.25, true)
+	t.d2 = gs.create_directional_light({-0.5, 1, -0.5}, {1.0, 0.6, 0.8}, 0.25, true)
+	t.d3 = gs.create_directional_light({0.5, 1, -0.5}, {1.0, 0.8, 0.6}, 0.25, true)
 	t.spot = gs.create_spot_light({0, -800, 0}, {0, 1, 0}, {0.6, 0.6, 0.6}, 45, false)
 
 	mesh := util.collision_mesh(&t.obj)
@@ -62,6 +66,8 @@ testmap_draw :: proc(a: ^scene.Actor) -> bool {
 	t := cast(^TestMap)(a.data)
 	gs.draw_mesh(&t.obj, &t.mat, transform.mat4(&t.trans))
 	gs.draw_directional_light(&t.d)
+	gs.draw_directional_light(&t.d2)
+	gs.draw_directional_light(&t.d3)
 	gs.draw_spot_light(&t.spot)
 	//gs.draw_light({direction={0.5, -1, 0}, type=.Directional, shadows=true})
 	//util.draw_mesh(&t.col)

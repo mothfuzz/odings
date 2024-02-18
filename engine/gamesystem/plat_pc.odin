@@ -22,6 +22,7 @@ framebuffer_size_callback :: proc "c" (win: glfw.WindowHandle, width, height: i3
 gs_init :: proc() {
 	fmt.println("Initializing Windows...")
 	glfw.Init()
+	glfw.WindowHint(glfw.SAMPLES, common.Anti_Aliasing_Samples);
 	window = glfw.CreateWindow(i32(Screen_Width), i32(Screen_Height), "uwu", nil, nil)
 	glfw.SetKeyCallback(window, key_callback)
 	glfw.SetFramebufferSizeCallback(window, framebuffer_size_callback)

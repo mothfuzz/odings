@@ -114,28 +114,30 @@ draw_all_lines :: proc(view: matrix[4,4]f32, projection: matrix[4,4]f32) {
 	gl.Uniform4f(program_uniform_material.tint, 1.0, 1.0, 1.0, 1.0)
 
 	for line in &lines {
-		gl.BindBuffer(gl.ARRAY_BUFFER, lines_positions)
-		gl.BufferData(gl.ARRAY_BUFFER, len(line.vertices) * size_of([3]f32), line.vertices.position, gl.DYNAMIC_DRAW)
-		gl.BindBuffer(gl.ARRAY_BUFFER, lines_colors)
-		gl.BufferData(gl.ARRAY_BUFFER, len(line.vertices) * size_of([4]f32), line.vertices.color, gl.DYNAMIC_DRAW)
-		gl.BindBuffer(gl.ARRAY_BUFFER, lines_mvps)
-		mvp := projection * view * line.model_transform
-		gl.BufferData(gl.ARRAY_BUFFER, size_of(matrix[4,4]f32), &mvp, gl.DYNAMIC_DRAW)
-		gl.BindBuffer(gl.ARRAY_BUFFER, lines_models)
-		gl.BufferData(gl.ARRAY_BUFFER, size_of(matrix[4,4]f32), &line.model_transform, gl.DYNAMIC_DRAW)
-		//dammit bill
-		when ODIN_OS == .JS {
-			size := len(line.vertices)
-		} else {
-			size := i32(len(line.vertices))
-		}
-		switch line.mode {
-		case 0:
-			gl.DrawArraysInstanced(gl.LINES, 0, size, 1)
-		case 1:
-			gl.DrawArraysInstanced(gl.LINE_STRIP, 0, size, 1)
-		case 2:
-			gl.DrawArraysInstanced(gl.LINE_LOOP, 0, size, 1)
+		when ODIN_DEBUG {
+			gl.BindBuffer(gl.ARRAY_BUFFER, lines_positions)
+			gl.BufferData(gl.ARRAY_BUFFER, len(line.vertices) * size_of([3]f32), line.vertices.position, gl.DYNAMIC_DRAW)
+			gl.BindBuffer(gl.ARRAY_BUFFER, lines_colors)
+			gl.BufferData(gl.ARRAY_BUFFER, len(line.vertices) * size_of([4]f32), line.vertices.color, gl.DYNAMIC_DRAW)
+			gl.BindBuffer(gl.ARRAY_BUFFER, lines_mvps)
+			mvp := projection * view * line.model_transform
+			gl.BufferData(gl.ARRAY_BUFFER, size_of(matrix[4,4]f32), &mvp, gl.DYNAMIC_DRAW)
+			gl.BindBuffer(gl.ARRAY_BUFFER, lines_models)
+			gl.BufferData(gl.ARRAY_BUFFER, size_of(matrix[4,4]f32), &line.model_transform, gl.DYNAMIC_DRAW)
+			//dammit bill
+			when ODIN_OS == .JS {
+				size := len(line.vertices)
+			} else {
+				size := i32(len(line.vertices))
+			}
+			switch line.mode {
+			case 0:
+				gl.DrawArraysInstanced(gl.LINES, 0, size, 1)
+			case 1:
+				gl.DrawArraysInstanced(gl.LINE_STRIP, 0, size, 1)
+			case 2:
+				gl.DrawArraysInstanced(gl.LINE_LOOP, 0, size, 1)
+			}
 		}
 		delete_soa(line.vertices)
 	}
