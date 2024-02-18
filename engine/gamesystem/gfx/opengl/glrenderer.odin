@@ -139,7 +139,9 @@ init :: proc() {
 	gl.Enable(gl.DEPTH_TEST)
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-	gl.Enable(gl.MULTISAMPLE)
+	when ODIN_OS != .JS {
+		gl.Enable(gl.MULTISAMPLE)
+	}
 }
 
 //also called in plat
